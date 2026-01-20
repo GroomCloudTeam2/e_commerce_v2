@@ -11,6 +11,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -163,6 +165,11 @@ public class OrderService {
 			.orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다. ID: " + orderId));
 
 		return OrderResponse.from(order);
+	}
+
+	public Page<OrderResponse> getMyOrders(UUID buyerId, Pageable pageable) {
+		return orderRepository.findAllByBuyerId(buyerId, pageable)
+			.map(OrderResponse::from);
 	}
 	public List<OrderResponse> getOrdersByProduct(UUID productId) {
 		// 1. 리포지토리 호출
