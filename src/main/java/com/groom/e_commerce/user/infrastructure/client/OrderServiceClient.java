@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.groom.e_commerce.user.infrastructure.config.FeignConfig;
+import com.groom.e_commerce.global.infrastructure.feign.config.FeignConfig;
 import com.groom.e_commerce.user.infrastructure.fallback.OrderServiceFallbackFactory;
 
 @FeignClient(

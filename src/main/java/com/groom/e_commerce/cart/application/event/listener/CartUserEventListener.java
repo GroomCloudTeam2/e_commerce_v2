@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class UserEventListener {
+public class CartUserEventListener {
 
 	private final CartService cartService;
 
