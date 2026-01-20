@@ -43,7 +43,7 @@ public class UserEventListener {
 		}
 	}
 
-	@Async
+	@Async("eventExecutor")
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleUserSignedUp(UserSignedUpEvent event) {
 		log.info("User signed up: userId={}, email={}, role={}",

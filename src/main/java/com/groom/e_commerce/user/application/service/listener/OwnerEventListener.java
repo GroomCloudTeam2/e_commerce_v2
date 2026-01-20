@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class OwnerEventListener {
 
-	@Async
+	@Async("eventExecutor")
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleOwnerSignedUp(OwnerSignedUpEvent event) {
 		log.info("Owner signed up: store={}, email={}",
