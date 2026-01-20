@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import com.groom.e_commerce.cart.application.dto.ProductCartInfo;
 import com.groom.e_commerce.cart.application.dto.StockManagement;
-import com.groom.e_commerce.cart.infrastructure.feign.config.FeignConfig;
+import com.groom.e_commerce.global.infrastructure.feign.config.FeignConfig;
 
 /**
  * Product 서비스 API 호출용 Feign Client
