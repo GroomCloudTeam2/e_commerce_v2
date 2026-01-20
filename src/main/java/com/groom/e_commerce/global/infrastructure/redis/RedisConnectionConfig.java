@@ -1,4 +1,4 @@
-package com.groom.e_commerce.globalv2.infrastructure.redis;
+package com.groom.e_commerce.global.infrastructure.redis;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

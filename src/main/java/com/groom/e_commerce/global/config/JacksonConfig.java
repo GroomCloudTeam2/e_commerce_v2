@@ -1,4 +1,4 @@
-package com.groom.e_commerce.globalv2.config;
+package com.groom.e_commerce.global.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,4 +1,4 @@
-package com.groom.e_commerce.globalv2.async;
+package com.groom.e_commerce.global.async;
 
 import java.util.concurrent.Executor;
 
