@@ -5,7 +5,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import com.groom.e_commerce.cart.application.CartService;
-import com.groom.e_commerce.cart.application.event.OrderConfirmedEvent;
+import com.groom.e_commerce.cart.application.event.CartOrderConfirmedEvent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class OrderEventListener {
+public class CartOrderEventListener {
 
     private final CartService cartService;
 
@@ -22,7 +22,7 @@ public class OrderEventListener {
      */
     @Async("cartEventExecutor")
     @EventListener
-    public void handle(OrderConfirmedEvent event) {
+    public void handle(CartOrderConfirmedEvent event) {
         log.info("주문 확정 이벤트 수신 - userId={}, orderId={}",
             event.userId(), event.orderId());
 

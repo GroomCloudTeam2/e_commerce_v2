@@ -5,7 +5,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import com.groom.e_commerce.cart.application.CartService;
-import com.groom.e_commerce.cart.application.event.UserDeletedEvent;
+import com.groom.e_commerce.cart.application.event.CartUserDeletedEvent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class UserEventListener {
+public class CartUserEventListener {
 
 	private final CartService cartService;
 
@@ -28,7 +28,7 @@ public class UserEventListener {
 	 */
 	@Async("cartEventExecutor")
 	@EventListener
-	public void handle(UserDeletedEvent event) {
+	public void handle(CartUserDeletedEvent event) {
 		log.info("유저 탈퇴 이벤트 수신 - userId={}", event.userId());
 		cartService.clearCart(event.userId());
 	}

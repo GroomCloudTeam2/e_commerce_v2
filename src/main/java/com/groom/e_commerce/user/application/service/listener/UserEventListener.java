@@ -1,6 +1,6 @@
 package com.groom.e_commerce.user.application.service.listener;
 
-import org.springframework.scheduling.annotation.Async;
+import java.util.concurrent.Executor;import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class UserEventListener {
 
-	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+	private final Executor eventExecutor;@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleUserWithdrawn(UserWithdrawnEvent event) {
 		log.info("User withdrawn event: userId={}", event.getUserId());
 	}
