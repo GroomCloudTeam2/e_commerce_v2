@@ -1,4 +1,4 @@
-package com.groom.e_commerce.cart.domain.dto;
+package com.groom.e_commerce.cart.domain.model;
 
 import java.util.UUID;
 

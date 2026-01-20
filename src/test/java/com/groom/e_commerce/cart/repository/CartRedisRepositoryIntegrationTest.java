@@ -14,7 +14,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import com.groom.e_commerce.cart.domain.dto.CartItem;
+import com.groom.e_commerce.cart.domain.model.CartItem;
 import com.groom.e_commerce.cart.domain.repository.CartRepository;
 
 @SpringBootTest

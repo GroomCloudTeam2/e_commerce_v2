@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.groom.e_commerce.cart.domain.dto.CartItem;
+import com.groom.e_commerce.cart.domain.model.CartItem;
 import com.groom.e_commerce.cart.domain.model.CartItemKey;
 
 public interface CartRepository {

@@ -1,4 +1,4 @@
-package com.groom.e_commerce.review.infrastructure.feign.config;
+package com.groom.e_commerce.cart.infrastructure.feign.config;
 
 import java.util.concurrent.TimeUnit;
 

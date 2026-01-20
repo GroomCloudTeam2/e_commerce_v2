@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
-import com.groom.e_commerce.cart.domain.dto.CartItem;
+import com.groom.e_commerce.cart.domain.model.CartItem;
 import com.groom.e_commerce.cart.domain.model.CartItemKey;
 import com.groom.e_commerce.cart.domain.repository.CartRepository;
 import com.groom.e_commerce.cart.infrastructure.redis.support.CartRedisKeyGenerator;

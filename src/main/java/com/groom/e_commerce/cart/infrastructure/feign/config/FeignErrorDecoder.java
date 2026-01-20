@@ -1,4 +1,4 @@
-package com.groom.e_commerce.review.infrastructure.feign.config;
+package com.groom.e_commerce.cart.infrastructure.feign.config;
 
 import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
@@ -17,7 +17,6 @@ public class FeignErrorDecoder implements ErrorDecoder {
 			case 400 -> new CustomException(ErrorCode.INVALID_REQUEST);
 			case 403 -> new CustomException(ErrorCode.FORBIDDEN);
 			case 404 -> new CustomException(ErrorCode.ORDER_NOT_FOUND);
-			case 409 -> new CustomException(ErrorCode.REVIEW_NOT_ALLOWED_ORDER_STATUS);
 			case 500, 502, 503 ->
 				new CustomException(ErrorCode.ORDER_SERVICE_ERROR);
 			default -> defaultDecoder.decode(methodKey, response);

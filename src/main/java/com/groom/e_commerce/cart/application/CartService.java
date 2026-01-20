@@ -12,14 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.groom.e_commerce.cart.application.dto.ProductCartInfo;
 import com.groom.e_commerce.cart.application.dto.StockManagement;
-import com.groom.e_commerce.cart.domain.dto.CartItem;
+import com.groom.e_commerce.cart.domain.model.CartItem;
 import com.groom.e_commerce.cart.domain.model.CartItemKey;
 import com.groom.e_commerce.cart.domain.repository.CartRepository;
 import com.groom.e_commerce.cart.infrastructure.feign.ProductClient;
 import com.groom.e_commerce.cart.presentation.dto.request.CartAddRequest;
 import com.groom.e_commerce.cart.presentation.dto.response.CartItemResponse;
-import com.groom.e_commerce.globalv2.presentation.advice.CustomException;
-import com.groom.e_commerce.globalv2.presentation.advice.ErrorCode;
+import com.groom.e_commerce.global.presentation.advice.CustomException;
+import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

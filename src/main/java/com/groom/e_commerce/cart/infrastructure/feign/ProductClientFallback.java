@@ -6,8 +6,8 @@ import org.springframework.stereotype.Component;
 
 import com.groom.e_commerce.cart.application.dto.ProductCartInfo;
 import com.groom.e_commerce.cart.application.dto.StockManagement;
-import com.groom.e_commerce.globalv2.presentation.advice.CustomException;
-import com.groom.e_commerce.globalv2.presentation.advice.ErrorCode;
+import com.groom.e_commerce.global.presentation.advice.CustomException;
+import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 
 @Component
 public class ProductClientFallback implements ProductClient {

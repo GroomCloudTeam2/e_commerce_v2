@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import com.groom.e_commerce.cart.application.dto.ProductCartInfo;
 import com.groom.e_commerce.cart.application.dto.StockManagement;
+import com.groom.e_commerce.cart.infrastructure.feign.config.FeignConfig;
 
 /**
  * Product 서비스 API 호출용 Feign Client
@@ -21,7 +22,8 @@ import com.groom.e_commerce.cart.application.dto.StockManagement;
 @FeignClient(
     name = "product-service",
     url = "${external.product-service.url}",
-    fallback = ProductClientFallback.class
+    fallback = ProductClientFallback.class,
+    configuration = FeignConfig.class
 )
 public interface ProductClient {
 
