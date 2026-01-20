@@ -1,9 +1,11 @@
 package com.groom.e_commerce.user.application.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,12 +13,13 @@ import org.springframework.util.StringUtils;
 
 import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
-import com.groom.e_commerce.global.util.SecurityUtil;
 import com.groom.e_commerce.user.domain.entity.address.AddressEntity;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerEntity;
 import com.groom.e_commerce.user.domain.entity.user.PeriodType;
 import com.groom.e_commerce.user.domain.entity.user.UserEntity;
 import com.groom.e_commerce.user.domain.entity.user.UserRole;
+import com.groom.e_commerce.user.domain.event.UserUpdateEvent;
+import com.groom.e_commerce.user.domain.event.UserWithdrawnEvent;
 import com.groom.e_commerce.user.domain.repository.AddressRepository;
 import com.groom.e_commerce.user.domain.repository.OwnerRepository;
 import com.groom.e_commerce.user.domain.repository.UserRepository;
@@ -37,10 +40,9 @@ public class UserServiceV1 {
 	private final AddressRepository addressRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final OwnerRepository ownerRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
-	public ResUserDtoV1 getMe() {
-		UUID userId = SecurityUtil.getCurrentUserId();
-
+	public ResUserDtoV1 getMe(UUID userId) {
 		// -- 기본 배송지 조회 --
 		UserEntity user = findUserById(userId);
 
@@ -59,29 +61,44 @@ public class UserServiceV1 {
 	}
 
 	@Transactional
-	public void updateMe(ReqUpdateUserDtoV1 request) {
-		UUID userId = SecurityUtil.getCurrentUserId();
+	public void updateMe(UUID userId, ReqUpdateUserDtoV1 request) {
 		UserEntity user = findUserById(userId);
+
+		String newNickname = null;
+		String newPhoneNumber = null;
+		boolean password = false;
 
 		if (StringUtils.hasText(request.getNickname())) {
 			validateNicknameNotTaken(request.getNickname(), userId);
 			user.updateNickname(request.getNickname());
+			newNickname = request.getNickname();
 		}
 
 		if (StringUtils.hasText(request.getPhoneNumber())) {
 			user.updatePhoneNumber(request.getPhoneNumber());
+			newPhoneNumber = request.getPhoneNumber();
 		}
 
 		if (StringUtils.hasText(request.getPassword())) {
 			user.updatePassword(passwordEncoder.encode(request.getPassword()));
+			password = true;
+		}
+
+		if (newNickname != null || newPhoneNumber != null || password) {
+			eventPublisher.publishEvent(UserUpdateEvent.builder()
+				.userId(userId)
+				.nickname(newNickname)
+				.phoneNumber(newPhoneNumber)
+				.password(password)
+				.occurredAt(LocalDateTime.now())
+				.build());
 		}
 
 		log.info("User updated: {}", userId);
 	}
 
 	@Transactional
-	public void deleteMe() {
-		UUID userId = SecurityUtil.getCurrentUserId();
+	public void deleteMe(UUID userId) {
 		UserEntity user = findUserById(userId);
 
 		if (user.isWithdrawn()) {
@@ -89,11 +106,13 @@ public class UserServiceV1 {
 		}
 
 		user.withdraw();
+
+		eventPublisher.publishEvent(new UserWithdrawnEvent(userId));
+
 		log.info("User withdrew: {}", userId);
 	}
 
-	public List<ResSalesStatDtoV1> getSalesStats(PeriodType periodType, LocalDate date) {
-		UUID userId = SecurityUtil.getCurrentUserId();
+	public List<ResSalesStatDtoV1> getSalesStats(UUID userId, PeriodType periodType, LocalDate date) {
 		UserEntity user = findUserById(userId);
 
 		if (user.getRole() != UserRole.OWNER) {

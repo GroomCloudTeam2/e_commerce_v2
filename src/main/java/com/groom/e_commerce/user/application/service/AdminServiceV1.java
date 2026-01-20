@@ -2,6 +2,7 @@ package com.groom.e_commerce.user.application.service;
 
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,6 +36,7 @@ public class AdminServiceV1 {
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final OwnerRepository ownerRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	// ==================== Manager 기능 ====================
 
