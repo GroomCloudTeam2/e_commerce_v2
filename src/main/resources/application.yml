@@ -2,40 +2,61 @@ spring:
   application:
     name: e_commerce
 
+  # ----------------------------
+  # Redis (Local Docker)
+  # ----------------------------
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+
+  # ----------------------------
+  # PostgreSQL (Local Docker)
+  # ----------------------------
   datasource:
-    url: jdbc:postgresql://localhost:5432/ecommerce
+    url: jdbc:postgresql://localhost:5400/ecommerce
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
 
+  # ----------------------------
+  # JPA (개발용)
+  # ----------------------------
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update     # ⚠️ 개발용만 사용 (운영 X)
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 100
-        # 👇 (선택) PostgreSQL 전용 방언 설정 (없어도 되지만 넣으면 더 안정적)
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  security:
-    user:
-      name: user
-      password: 1234
 
-
+# ----------------------------
+# External Services (Local Mock)
+# ----------------------------
 external:
   product-service:
     url: http://localhost:8080
   order-service:
     url: http://localhost:8080
 
+
+# ----------------------------
+# JWT
+# ----------------------------
 jwt:
   secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
   access-token-validity: 3600000
   refresh-token-validity: 604800000
 
+
+# ----------------------------
+# AI (Local / Dummy)
+# ----------------------------
 ai:
   openai:
     api-key: ${OPENAI_API_KEY:dummy}
@@ -43,20 +64,25 @@ ai:
     model: gpt-4o-mini
 
 
-
+# ----------------------------
+# Logging (개발 가독성)
+# ----------------------------
 logging:
   level:
     root: ERROR
-    com.groom.ecommerce: DEBUG
+    com.groom.e_commerce: DEBUG
     org.hibernate.SQL: DEBUG
 
+
+# ----------------------------
+# Toss Payments (Sandbox / Local)
+# ----------------------------
 toss:
   payments:
     base-url: https://api.tosspayments.com
-    secret-key: ${TOSS_PAYMENTS_SECRET_KEY:}
+    secret-key: ${TOSS_PAYMENTS_SECRET_KEY:dummy}
     client-key: test_ck_AQ92ymxN349xlKM196KKVajRKXvd
     success-url: http://localhost:8080/pay-success.html
     fail-url: http://localhost:8080/pay-fail.html
     connect-timeout-ms: 3000
     read-timeout-ms: 5000
-

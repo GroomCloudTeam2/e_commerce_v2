@@ -10,7 +10,7 @@ pipeline {
         IMAGE_TAG  = "${BUILD_NUMBER}"
 
         // ===== SonarCloud =====
-        SONAR_PROJECT_KEY = "groom"
+        SONAR_PROJECT_KEY = "goorm"
         SONAR_ORG = "boxty"
         SONAR_HOST_URL = "https://sonarcloud.io"
     }
