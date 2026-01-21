@@ -30,10 +30,11 @@ pipeline {
         /* =========================
          * 1️⃣ Unit & Slice Tests ONLY
          * ========================= */
+
         stage('Test') {
             steps {
                 sh '''
-                  ./gradlew clean test
+                  ./gradlew clean test jacocoTestReport
                 '''
             }
             post {
@@ -43,6 +44,7 @@ pipeline {
                 }
             }
         }
+
 
         /* =========================
          * 2️⃣ SonarCloud Analysis
