@@ -63,15 +63,16 @@ pipeline {
             }
             steps {
                 sh '''
-                    ./gradlew sonar \
-                      -Dsonar.projectKey=$SONAR_PROJECT_KEY \
-                      -Dsonar.organization=$SONAR_ORG \
-                      -Dsonar.host.url=$SONAR_HOST_URL \
-                      -Dsonar.token=$SONAR_TOKEN \
-                      -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/jacoco/test/jacocoTestReport.xml
+                  ./gradlew sonarqube \
+                    -Dsonar.projectKey=$SONAR_PROJECT_KEY \
+                    -Dsonar.organization=$SONAR_ORG \
+                    -Dsonar.host.url=$SONAR_HOST_URL \
+                    -Dsonar.token=$SONAR_TOKEN \
+                    -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/jacoco/test/jacocoTestReport.xml
                 '''
             }
         }
+
 
         /* =========================
          * 3️⃣ Quality Gate
