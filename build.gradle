@@ -7,14 +7,13 @@ plugins {
 // -- jenkins -- //
     id 'jacoco'
     id 'org.sonarqube' version '4.4.1.3373'
-
 }
 
 sonar {
     properties {
         property 'sonar.projectKey', 'courm-proejct'
         property 'sonar.projectName', 'courm-proejct'
-        property 'sonar.host.url', 'http://sonarqube:9000'
+        property 'sonar.host.url', 'http://localhost:9000'
         property 'sonar.coverage.jacoco.xmlReportPaths',
                 'build/reports/jacoco/test/jacocoTestReport.xml'
     }
