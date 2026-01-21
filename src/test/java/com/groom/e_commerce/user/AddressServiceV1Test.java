@@ -35,346 +35,346 @@ import com.groom.e_commerce.user.presentation.dto.response.address.ResAddressDto
 @DisplayName("AddressServiceV1 단위 테스트")
 class AddressServiceV1Test {
 
-    @Mock
-    private AddressRepository addressRepository;
+	@Mock
+	private AddressRepository addressRepository;
 
-    @Mock
-    private UserServiceV1 userService;
+	@Mock
+	private UserServiceV1 userService;
 
-    @InjectMocks
-    private AddressServiceV1 addressService;
+	@InjectMocks
+	private AddressServiceV1 addressService;
 
-    private UUID userId;
-    private UUID addressId;
-    private UserEntity user;
-    private AddressEntity address;
+	private UUID userId;
+	private UUID addressId;
+	private UserEntity user;
+	private AddressEntity address;
 
-    @BeforeEach
-    void setUp() {
-        userId = UUID.randomUUID();
-        addressId = UUID.randomUUID();
+	@BeforeEach
+	void setUp() {
+		userId = UUID.randomUUID();
+		addressId = UUID.randomUUID();
 
-        user = UserEntity.builder()
-            .userId(userId)
-            .email("test@example.com")
-            .password("encodedPassword")
-            .nickname("testUser")
-            .phoneNumber("010-1234-5678")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+		user = UserEntity.builder()
+			.userId(userId)
+			.email("test@example.com")
+			.password("encodedPassword")
+			.nickname("testUser")
+			.phoneNumber("010-1234-5678")
+			.role(UserRole.USER)
+			.status(UserStatus.ACTIVE)
+			.build();
 
-        address = AddressEntity.builder()
-            .addressId(addressId)
-            .user(user)
-            .zipCode("12345")
-            .address("서울시 강남구")
-            .detailAddress("테스트빌딩 101호")
-            .recipient("홍길동")
-            .recipientPhone("010-1111-2222")
-            .isDefault(false)
-            .build();
-    }
+		address = AddressEntity.builder()
+			.addressId(addressId)
+			.user(user)
+			.zipCode("12345")
+			.address("서울시 강남구")
+			.detailAddress("테스트빌딩 101호")
+			.recipient("홍길동")
+			.recipientPhone("010-1111-2222")
+			.isDefault(false)
+			.build();
+	}
 
-    @Nested
-    @DisplayName("getAddresses 메서드")
-    class GetAddressesTest {
+	// Helper methods
+	private ReqAddressDtoV1 createAddressRequest(boolean isDefault) {
+		ReqAddressDtoV1 request = new ReqAddressDtoV1();
+		request.setZipCode("12345");
+		request.setAddress("서울시 강남구");
+		request.setDetailAddress("테스트빌딩 101호");
+		request.setRecipient("홍길동");
+		request.setRecipientPhone("010-1111-2222");
+		request.setIsDefault(isDefault);
+		return request;
+	}
 
-        @Test
-        @DisplayName("사용자의 모든 주소 조회 성공")
-        void getAddresses_Success() {
-            // given
-            AddressEntity address2 = AddressEntity.builder()
-                .addressId(UUID.randomUUID())
-                .user(user)
-                .zipCode("67890")
-                .address("서울시 서초구")
-                .detailAddress("다른빌딩 202호")
-                .recipient("김철수")
-                .recipientPhone("010-3333-4444")
-                .isDefault(true)
-                .build();
+	@Nested
+	@DisplayName("getAddresses 메서드")
+	class GetAddressesTest {
 
-            List<AddressEntity> addresses = Arrays.asList(address, address2);
+		@Test
+		@DisplayName("사용자의 모든 주소 조회 성공")
+		void getAddresses_Success() {
+			// given
+			AddressEntity address2 = AddressEntity.builder()
+				.addressId(UUID.randomUUID())
+				.user(user)
+				.zipCode("67890")
+				.address("서울시 서초구")
+				.detailAddress("다른빌딩 202호")
+				.recipient("김철수")
+				.recipientPhone("010-3333-4444")
+				.isDefault(true)
+				.build();
 
-            given(addressRepository.findByUserUserId(userId))
-                .willReturn(addresses);
+			List<AddressEntity> addresses = Arrays.asList(address, address2);
 
-            // when
-            List<ResAddressDtoV1> result = addressService.getAddresses(userId);
+			given(addressRepository.findByUserUserId(userId))
+				.willReturn(addresses);
 
-            // then
-            assertThat(result).hasSize(2);
-            verify(addressRepository).findByUserUserId(userId);
-        }
+			// when
+			List<ResAddressDtoV1> result = addressService.getAddresses(userId);
 
-        @Test
-        @DisplayName("주소가 없는 사용자 조회 시 빈 리스트 반환")
-        void getAddresses_EmptyList() {
-            // given
-            given(addressRepository.findByUserUserId(userId))
-                .willReturn(List.of());
+			// then
+			assertThat(result).hasSize(2);
+			verify(addressRepository).findByUserUserId(userId);
+		}
 
-            // when
-            List<ResAddressDtoV1> result = addressService.getAddresses(userId);
+		@Test
+		@DisplayName("주소가 없는 사용자 조회 시 빈 리스트 반환")
+		void getAddresses_EmptyList() {
+			// given
+			given(addressRepository.findByUserUserId(userId))
+				.willReturn(List.of());
 
-            // then
-            assertThat(result).isEmpty();
-        }
-    }
+			// when
+			List<ResAddressDtoV1> result = addressService.getAddresses(userId);
 
-    @Nested
-    @DisplayName("createAddress 메서드")
-    class CreateAddressTest {
+			// then
+			assertThat(result).isEmpty();
+		}
+	}
 
-        @Test
-        @DisplayName("새 주소 생성 성공")
-        void createAddress_Success() {
-            // given
-            ReqAddressDtoV1 request = createAddressRequest(false);
+	@Nested
+	@DisplayName("createAddress 메서드")
+	class CreateAddressTest {
 
-            given(userService.findUserById(userId)).willReturn(user);
+		@Test
+		@DisplayName("새 주소 생성 성공")
+		void createAddress_Success() {
+			// given
+			ReqAddressDtoV1 request = createAddressRequest(false);
 
-            // when
-            addressService.createAddress(userId, request);
+			given(userService.findUserById(userId)).willReturn(user);
 
-            // then
-            ArgumentCaptor<AddressEntity> captor = ArgumentCaptor.forClass(AddressEntity.class);
-            verify(addressRepository).save(captor.capture());
+			// when
+			addressService.createAddress(userId, request);
 
-            AddressEntity savedAddress = captor.getValue();
-            assertThat(savedAddress.getZipCode()).isEqualTo(request.getZipCode());
-            assertThat(savedAddress.getAddress()).isEqualTo(request.getAddress());
-            assertThat(savedAddress.getDetailAddress()).isEqualTo(request.getDetailAddress());
-            assertThat(savedAddress.getRecipient()).isEqualTo(request.getRecipient());
-            assertThat(savedAddress.getRecipientPhone()).isEqualTo(request.getRecipientPhone());
-            assertThat(savedAddress.getIsDefault()).isFalse();
-        }
+			// then
+			ArgumentCaptor<AddressEntity> captor = ArgumentCaptor.forClass(AddressEntity.class);
+			verify(addressRepository).save(captor.capture());
 
-        @Test
-        @DisplayName("기본 배송지로 새 주소 생성 시 기존 기본 배송지 해제")
-        void createAddress_AsDefault_ClearsExistingDefault() {
-            // given
-            ReqAddressDtoV1 request = createAddressRequest(true);
+			AddressEntity savedAddress = captor.getValue();
+			assertThat(savedAddress.getZipCode()).isEqualTo(request.getZipCode());
+			assertThat(savedAddress.getAddress()).isEqualTo(request.getAddress());
+			assertThat(savedAddress.getDetailAddress()).isEqualTo(request.getDetailAddress());
+			assertThat(savedAddress.getRecipient()).isEqualTo(request.getRecipient());
+			assertThat(savedAddress.getRecipientPhone()).isEqualTo(request.getRecipientPhone());
+			assertThat(savedAddress.getIsDefault()).isFalse();
+		}
 
-            given(userService.findUserById(userId)).willReturn(user);
+		@Test
+		@DisplayName("기본 배송지로 새 주소 생성 시 기존 기본 배송지 해제")
+		void createAddress_AsDefault_ClearsExistingDefault() {
+			// given
+			ReqAddressDtoV1 request = createAddressRequest(true);
 
-            // when
-            addressService.createAddress(userId, request);
+			given(userService.findUserById(userId)).willReturn(user);
 
-            // then
-            verify(addressRepository).clearDefaultAddress(userId);
-            verify(addressRepository).save(any(AddressEntity.class));
-        }
+			// when
+			addressService.createAddress(userId, request);
 
-        @Test
-        @DisplayName("기본 배송지가 아닌 경우 clearDefaultAddress 호출하지 않음")
-        void createAddress_NotDefault_DoesNotClearDefault() {
-            // given
-            ReqAddressDtoV1 request = createAddressRequest(false);
+			// then
+			verify(addressRepository).clearDefaultAddress(userId);
+			verify(addressRepository).save(any(AddressEntity.class));
+		}
 
-            given(userService.findUserById(userId)).willReturn(user);
+		@Test
+		@DisplayName("기본 배송지가 아닌 경우 clearDefaultAddress 호출하지 않음")
+		void createAddress_NotDefault_DoesNotClearDefault() {
+			// given
+			ReqAddressDtoV1 request = createAddressRequest(false);
 
-            // when
-            addressService.createAddress(userId, request);
+			given(userService.findUserById(userId)).willReturn(user);
 
-            // then
-            verify(addressRepository, never()).clearDefaultAddress(any());
-        }
-    }
+			// when
+			addressService.createAddress(userId, request);
 
-    @Nested
-    @DisplayName("updateAddress 메서드")
-    class UpdateAddressTest {
+			// then
+			verify(addressRepository, never()).clearDefaultAddress(any());
+		}
+	}
 
-        @Test
-        @DisplayName("주소 수정 성공")
-        void updateAddress_Success() {
-            // given
-            ReqAddressDtoV1 request = new ReqAddressDtoV1();
-            request.setZipCode("99999");
-            request.setAddress("부산시 해운대구");
-            request.setDetailAddress("새건물 301호");
-            request.setRecipient("이영희");
-            request.setRecipientPhone("010-5555-6666");
-            request.setIsDefault(false);
+	@Nested
+	@DisplayName("updateAddress 메서드")
+	class UpdateAddressTest {
 
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.of(address));
+		@Test
+		@DisplayName("주소 수정 성공")
+		void updateAddress_Success() {
+			// given
+			ReqAddressDtoV1 request = new ReqAddressDtoV1();
+			request.setZipCode("99999");
+			request.setAddress("부산시 해운대구");
+			request.setDetailAddress("새건물 301호");
+			request.setRecipient("이영희");
+			request.setRecipientPhone("010-5555-6666");
+			request.setIsDefault(false);
 
-            // when
-            addressService.updateAddress(userId, addressId, request);
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.of(address));
 
-            // then
-            assertThat(address.getZipCode()).isEqualTo("99999");
-            assertThat(address.getAddress()).isEqualTo("부산시 해운대구");
-            assertThat(address.getDetailAddress()).isEqualTo("새건물 301호");
-            assertThat(address.getRecipient()).isEqualTo("이영희");
-            assertThat(address.getRecipientPhone()).isEqualTo("010-5555-6666");
-        }
+			// when
+			addressService.updateAddress(userId, addressId, request);
 
-        @Test
-        @DisplayName("기본 배송지로 수정 시 기존 기본 배송지 해제")
-        void updateAddress_ToDefault_ClearsExistingDefault() {
-            // given
-            ReqAddressDtoV1 request = createAddressRequest(true);
+			// then
+			assertThat(address.getZipCode()).isEqualTo("99999");
+			assertThat(address.getAddress()).isEqualTo("부산시 해운대구");
+			assertThat(address.getDetailAddress()).isEqualTo("새건물 301호");
+			assertThat(address.getRecipient()).isEqualTo("이영희");
+			assertThat(address.getRecipientPhone()).isEqualTo("010-5555-6666");
+		}
 
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.of(address));
+		@Test
+		@DisplayName("기본 배송지로 수정 시 기존 기본 배송지 해제")
+		void updateAddress_ToDefault_ClearsExistingDefault() {
+			// given
+			ReqAddressDtoV1 request = createAddressRequest(true);
 
-            // when
-            addressService.updateAddress(userId, addressId, request);
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.of(address));
 
-            // then
-            verify(addressRepository).clearDefaultAddress(userId);
-        }
+			// when
+			addressService.updateAddress(userId, addressId, request);
 
-        @Test
-        @DisplayName("존재하지 않는 주소 수정 시 예외 발생")
-        void updateAddress_NotFound_ThrowsException() {
-            // given
-            ReqAddressDtoV1 request = createAddressRequest(false);
+			// then
+			verify(addressRepository).clearDefaultAddress(userId);
+		}
 
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.empty());
+		@Test
+		@DisplayName("존재하지 않는 주소 수정 시 예외 발생")
+		void updateAddress_NotFound_ThrowsException() {
+			// given
+			ReqAddressDtoV1 request = createAddressRequest(false);
 
-            // when & then
-            assertThatThrownBy(() -> addressService.updateAddress(userId, addressId, request))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ADDRESS_NOT_FOUND);
-        }
-    }
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.empty());
 
-    @Nested
-    @DisplayName("deleteAddress 메서드")
-    class DeleteAddressTest {
+			// when & then
+			assertThatThrownBy(() -> addressService.updateAddress(userId, addressId, request))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.ADDRESS_NOT_FOUND);
+		}
+	}
 
-        @Test
-        @DisplayName("주소 삭제 성공")
-        void deleteAddress_Success() {
-            // given
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.of(address));
+	@Nested
+	@DisplayName("deleteAddress 메서드")
+	class DeleteAddressTest {
 
-            // when
-            addressService.deleteAddress(userId, addressId);
+		@Test
+		@DisplayName("주소 삭제 성공")
+		void deleteAddress_Success() {
+			// given
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.of(address));
 
-            // then
-            verify(addressRepository).delete(address);
-        }
+			// when
+			addressService.deleteAddress(userId, addressId);
 
-        @Test
-        @DisplayName("존재하지 않는 주소 삭제 시 예외 발생")
-        void deleteAddress_NotFound_ThrowsException() {
-            // given
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.empty());
+			// then
+			verify(addressRepository).delete(address);
+		}
 
-            // when & then
-            assertThatThrownBy(() -> addressService.deleteAddress(userId, addressId))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ADDRESS_NOT_FOUND);
-        }
-    }
+		@Test
+		@DisplayName("존재하지 않는 주소 삭제 시 예외 발생")
+		void deleteAddress_NotFound_ThrowsException() {
+			// given
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.empty());
 
-    @Nested
-    @DisplayName("setDefaultAddress 메서드")
-    class SetDefaultAddressTest {
+			// when & then
+			assertThatThrownBy(() -> addressService.deleteAddress(userId, addressId))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.ADDRESS_NOT_FOUND);
+		}
+	}
 
-        @Test
-        @DisplayName("기본 배송지 설정 성공")
-        void setDefaultAddress_Success() {
-            // given
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.of(address));
+	@Nested
+	@DisplayName("setDefaultAddress 메서드")
+	class SetDefaultAddressTest {
 
-            // when
-            addressService.setDefaultAddress(userId, addressId);
+		@Test
+		@DisplayName("기본 배송지 설정 성공")
+		void setDefaultAddress_Success() {
+			// given
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.of(address));
 
-            // then
-            verify(addressRepository).clearDefaultAddress(userId);
-            assertThat(address.getIsDefault()).isTrue();
-        }
+			// when
+			addressService.setDefaultAddress(userId, addressId);
 
-        @Test
-        @DisplayName("이미 기본 배송지인 주소를 기본 배송지로 설정 시 예외 발생")
-        void setDefaultAddress_AlreadyDefault_ThrowsException() {
-            // given
-            AddressEntity defaultAddress = AddressEntity.builder()
-                .addressId(addressId)
-                .user(user)
-                .zipCode("12345")
-                .address("서울시 강남구")
-                .detailAddress("테스트빌딩 101호")
-                .recipient("홍길동")
-                .recipientPhone("010-1111-2222")
-                .isDefault(true)
-                .build();
+			// then
+			verify(addressRepository).clearDefaultAddress(userId);
+			assertThat(address.getIsDefault()).isTrue();
+		}
 
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.of(defaultAddress));
+		@Test
+		@DisplayName("이미 기본 배송지인 주소를 기본 배송지로 설정 시 예외 발생")
+		void setDefaultAddress_AlreadyDefault_ThrowsException() {
+			// given
+			AddressEntity defaultAddress = AddressEntity.builder()
+				.addressId(addressId)
+				.user(user)
+				.zipCode("12345")
+				.address("서울시 강남구")
+				.detailAddress("테스트빌딩 101호")
+				.recipient("홍길동")
+				.recipientPhone("010-1111-2222")
+				.isDefault(true)
+				.build();
 
-            // when & then
-            assertThatThrownBy(() -> addressService.setDefaultAddress(userId, addressId))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_DEFAULT_ADDRESS);
-        }
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.of(defaultAddress));
 
-        @Test
-        @DisplayName("존재하지 않는 주소를 기본 배송지로 설정 시 예외 발생")
-        void setDefaultAddress_NotFound_ThrowsException() {
-            // given
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.empty());
+			// when & then
+			assertThatThrownBy(() -> addressService.setDefaultAddress(userId, addressId))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_DEFAULT_ADDRESS);
+		}
 
-            // when & then
-            assertThatThrownBy(() -> addressService.setDefaultAddress(userId, addressId))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ADDRESS_NOT_FOUND);
-        }
-    }
+		@Test
+		@DisplayName("존재하지 않는 주소를 기본 배송지로 설정 시 예외 발생")
+		void setDefaultAddress_NotFound_ThrowsException() {
+			// given
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.empty());
 
-    @Nested
-    @DisplayName("getAddress 메서드")
-    class GetAddressTest {
+			// when & then
+			assertThatThrownBy(() -> addressService.setDefaultAddress(userId, addressId))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.ADDRESS_NOT_FOUND);
+		}
+	}
 
-        @Test
-        @DisplayName("단일 주소 조회 성공")
-        void getAddress_Success() {
-            // given
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.of(address));
+	@Nested
+	@DisplayName("getAddress 메서드")
+	class GetAddressTest {
 
-            // when
-            ResAddressDtoV1 result = addressService.getAddress(addressId, userId);
+		@Test
+		@DisplayName("단일 주소 조회 성공")
+		void getAddress_Success() {
+			// given
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.of(address));
 
-            // then
-            assertThat(result).isNotNull();
-        }
+			// when
+			ResAddressDtoV1 result = addressService.getAddress(addressId, userId);
 
-        @Test
-        @DisplayName("존재하지 않는 주소 조회 시 예외 발생")
-        void getAddress_NotFound_ThrowsException() {
-            // given
-            given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
-                .willReturn(Optional.empty());
+			// then
+			assertThat(result).isNotNull();
+		}
 
-            // when & then
-            assertThatThrownBy(() -> addressService.getAddress(addressId, userId))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ADDRESS_NOT_FOUND);
-        }
-    }
+		@Test
+		@DisplayName("존재하지 않는 주소 조회 시 예외 발생")
+		void getAddress_NotFound_ThrowsException() {
+			// given
+			given(addressRepository.findByAddressIdAndUserUserId(addressId, userId))
+				.willReturn(Optional.empty());
 
-    // Helper methods
-    private ReqAddressDtoV1 createAddressRequest(boolean isDefault) {
-        ReqAddressDtoV1 request = new ReqAddressDtoV1();
-        request.setZipCode("12345");
-        request.setAddress("서울시 강남구");
-        request.setDetailAddress("테스트빌딩 101호");
-        request.setRecipient("홍길동");
-        request.setRecipientPhone("010-1111-2222");
-        request.setIsDefault(isDefault);
-        return request;
-    }
+			// when & then
+			assertThatThrownBy(() -> addressService.getAddress(addressId, userId))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.ADDRESS_NOT_FOUND);
+		}
+	}
 }

@@ -19,7 +19,7 @@ public class OwnerEventListener {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleOwnerSignedUp(OwnerSignedUpEvent event) {
 		log.info("Owner signed up: store={}, email={}",
-			event.getStoreName(), event.getEmail());
+			event.storeName(), event.email());
 
 		// TODO: 관리자에게 승인 요청 알림
 		// TODO: Owner에게 가입 완료 + 승인 대기 안내 메일

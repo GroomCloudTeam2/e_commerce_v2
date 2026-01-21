@@ -1,6 +1,8 @@
 package com.groom.e_commerce.user.application.service.listener;
 
-import java.util.concurrent.Executor;import org.springframework.scheduling.annotation.Async;
+import java.util.concurrent.Executor;
+
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -17,9 +19,11 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class UserEventListener {
 
-	private final Executor eventExecutor;@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+	private final Executor eventExecutor;
+
+	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleUserWithdrawn(UserWithdrawnEvent event) {
-		log.info("User withdrawn event: userId={}", event.getUserId());
+		log.info("User withdrawn event: userId={}", event.userId());
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -47,7 +51,7 @@ public class UserEventListener {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void handleUserSignedUp(UserSignedUpEvent event) {
 		log.info("User signed up: userId={}, email={}, role={}",
-			event.getUserId(), event.getEmail(), event.getRole());
+			event.userId(), event.email(), event.role());
 
 		// TODO: 환영 메일 발송
 		// TODO: 가입 쿠폰 발급

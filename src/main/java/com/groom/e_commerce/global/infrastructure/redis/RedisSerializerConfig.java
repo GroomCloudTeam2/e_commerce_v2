@@ -10,15 +10,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Configuration
 public class RedisSerializerConfig {
 
-    @Bean
-    public StringRedisSerializer stringRedisSerializer() {
-        return new StringRedisSerializer();
-    }
+	@Bean
+	public StringRedisSerializer stringRedisSerializer() {
+		return new StringRedisSerializer();
+	}
 
-    @Bean
-    public GenericJackson2JsonRedisSerializer jsonRedisSerializer(
-        ObjectMapper objectMapper
-    ) {
-        return new GenericJackson2JsonRedisSerializer(objectMapper);
-    }
+	@Bean
+	public GenericJackson2JsonRedisSerializer jsonRedisSerializer(
+		ObjectMapper objectMapper
+	) {
+		return new GenericJackson2JsonRedisSerializer(objectMapper);
+	}
 }

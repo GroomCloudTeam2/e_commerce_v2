@@ -41,335 +41,335 @@ import com.groom.e_commerce.user.presentation.dto.response.user.ResUserDtoV1;
 @DisplayName("UserServiceV1 단위 테스트")
 class UserServiceV1Test {
 
-    @Mock
-    private UserRepository userRepository;
+	@Mock
+	private UserRepository userRepository;
 
-    @Mock
-    private AddressRepository addressRepository;
+	@Mock
+	private AddressRepository addressRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+	@Mock
+	private PasswordEncoder passwordEncoder;
 
-    @Mock
-    private OwnerRepository ownerRepository;
+	@Mock
+	private OwnerRepository ownerRepository;
 
-    @Mock
-    private ApplicationEventPublisher eventPublisher;
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks
-    private UserServiceV1 userService;
+	@InjectMocks
+	private UserServiceV1 userService;
 
-    private UUID userId;
-    private UserEntity user;
-    private AddressEntity defaultAddress;
+	private UUID userId;
+	private UserEntity user;
+	private AddressEntity defaultAddress;
 
-    @BeforeEach
-    void setUp() {
-        userId = UUID.randomUUID();
-        user = UserEntity.builder()
-            .userId(userId)
-            .email("test@example.com")
-            .password("encodedPassword")
-            .nickname("testUser")
-            .phoneNumber("010-1234-5678")
-            .role(UserRole.USER)
-            .status(UserStatus.ACTIVE)
-            .build();
+	@BeforeEach
+	void setUp() {
+		userId = UUID.randomUUID();
+		user = UserEntity.builder()
+			.userId(userId)
+			.email("test@example.com")
+			.password("encodedPassword")
+			.nickname("testUser")
+			.phoneNumber("010-1234-5678")
+			.role(UserRole.USER)
+			.status(UserStatus.ACTIVE)
+			.build();
 
-        defaultAddress = AddressEntity.builder()
-            .addressId(UUID.randomUUID())
-            .user(user)
-            .zipCode("12345")
-            .address("서울시 강남구")
-            .detailAddress("테스트빌딩 101호")
-            .recipient("홍길동")
-            .recipientPhone("010-1111-2222")
-            .isDefault(true)
-            .build();
-    }
+		defaultAddress = AddressEntity.builder()
+			.addressId(UUID.randomUUID())
+			.user(user)
+			.zipCode("12345")
+			.address("서울시 강남구")
+			.detailAddress("테스트빌딩 101호")
+			.recipient("홍길동")
+			.recipientPhone("010-1111-2222")
+			.isDefault(true)
+			.build();
+	}
 
-    @Nested
-    @DisplayName("getMe 메서드")
-    class GetMeTest {
+	@Nested
+	@DisplayName("getMe 메서드")
+	class GetMeTest {
 
-        @Test
-        @DisplayName("일반 사용자 정보 조회 성공")
-        void getMe_Success_ForUser() {
-            // given
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
-            given(addressRepository.findByUserUserIdAndIsDefaultTrue(userId))
-                .willReturn(Optional.of(defaultAddress));
+		@Test
+		@DisplayName("일반 사용자 정보 조회 성공")
+		void getMe_Success_ForUser() {
+			// given
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user));
+			given(addressRepository.findByUserUserIdAndIsDefaultTrue(userId))
+				.willReturn(Optional.of(defaultAddress));
 
-            // when
-            ResUserDtoV1 result = userService.getMe(userId);
+			// when
+			ResUserDtoV1 result = userService.getMe(userId);
 
-            // then
-            assertThat(result).isNotNull();
-            verify(userRepository).findByUserIdAndDeletedAtIsNull(userId);
-            verify(addressRepository).findByUserUserIdAndIsDefaultTrue(userId);
-            verify(ownerRepository, never()).findByUserUserIdAndDeletedAtIsNull(any());
-        }
+			// then
+			assertThat(result).isNotNull();
+			verify(userRepository).findByUserIdAndDeletedAtIsNull(userId);
+			verify(addressRepository).findByUserUserIdAndIsDefaultTrue(userId);
+			verify(ownerRepository, never()).findByUserUserIdAndDeletedAtIsNull(any());
+		}
 
-        @Test
-        @DisplayName("OWNER 사용자 정보 조회 시 Owner 정보 포함")
-        void getMe_Success_ForOwner() {
-            // given
-            UserEntity ownerUser = UserEntity.builder()
-                .userId(userId)
-                .email("owner@example.com")
-                .password("encodedPassword")
-                .nickname("ownerUser")
-                .phoneNumber("010-9999-8888")
-                .role(UserRole.OWNER)
-                .status(UserStatus.ACTIVE)
-                .build();
+		@Test
+		@DisplayName("OWNER 사용자 정보 조회 시 Owner 정보 포함")
+		void getMe_Success_ForOwner() {
+			// given
+			UserEntity ownerUser = UserEntity.builder()
+				.userId(userId)
+				.email("owner@example.com")
+				.password("encodedPassword")
+				.nickname("ownerUser")
+				.phoneNumber("010-9999-8888")
+				.role(UserRole.OWNER)
+				.status(UserStatus.ACTIVE)
+				.build();
 
-            OwnerEntity owner = OwnerEntity.builder()
-                .ownerId(UUID.randomUUID())
-                .user(ownerUser)
-                .storeName("테스트스토어")
-                .ownerStatus(OwnerStatus.APPROVED)
-                .build();
+			OwnerEntity owner = OwnerEntity.builder()
+				.ownerId(UUID.randomUUID())
+				.user(ownerUser)
+				.storeName("테스트스토어")
+				.ownerStatus(OwnerStatus.APPROVED)
+				.build();
 
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(ownerUser));
-            given(addressRepository.findByUserUserIdAndIsDefaultTrue(userId))
-                .willReturn(Optional.empty());
-            given(ownerRepository.findByUserUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(owner));
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(ownerUser));
+			given(addressRepository.findByUserUserIdAndIsDefaultTrue(userId))
+				.willReturn(Optional.empty());
+			given(ownerRepository.findByUserUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(owner));
 
-            // when
-            ResUserDtoV1 result = userService.getMe(userId);
+			// when
+			ResUserDtoV1 result = userService.getMe(userId);
 
-            // then
-            assertThat(result).isNotNull();
-            verify(ownerRepository).findByUserUserIdAndDeletedAtIsNull(userId);
-        }
+			// then
+			assertThat(result).isNotNull();
+			verify(ownerRepository).findByUserUserIdAndDeletedAtIsNull(userId);
+		}
 
-        @Test
-        @DisplayName("존재하지 않는 사용자 조회 시 예외 발생")
-        void getMe_UserNotFound() {
-            // given
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.empty());
+		@Test
+		@DisplayName("존재하지 않는 사용자 조회 시 예외 발생")
+		void getMe_UserNotFound() {
+			// given
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.empty());
 
-            // when & then
-            assertThatThrownBy(() -> userService.getMe(userId))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
-        }
-    }
+			// when & then
+			assertThatThrownBy(() -> userService.getMe(userId))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
+		}
+	}
 
-    @Nested
-    @DisplayName("updateMe 메서드")
-    class UpdateMeTest {
+	@Nested
+	@DisplayName("updateMe 메서드")
+	class UpdateMeTest {
 
-        @Test
-        @DisplayName("닉네임 업데이트 성공")
-        void updateMe_Nickname_Success() {
-            // given
-            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
-            request.setNickname("newNickname");
+		@Test
+		@DisplayName("닉네임 업데이트 성공")
+		void updateMe_Nickname_Success() {
+			// given
+			ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+			request.setNickname("newNickname");
 
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
-            given(userRepository.findByNickname("newNickname"))
-                .willReturn(Optional.empty());
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user));
+			given(userRepository.findByNickname("newNickname"))
+				.willReturn(Optional.empty());
 
-            // when
-            userService.updateMe(userId, request);
+			// when
+			userService.updateMe(userId, request);
 
-            // then
-            assertThat(user.getNickname()).isEqualTo("newNickname");
-            verify(eventPublisher).publishEvent(any(UserUpdateEvent.class));
-        }
+			// then
+			assertThat(user.getNickname()).isEqualTo("newNickname");
+			verify(eventPublisher).publishEvent(any(UserUpdateEvent.class));
+		}
 
-        @Test
-        @DisplayName("전화번호 업데이트 성공")
-        void updateMe_PhoneNumber_Success() {
-            // given
-            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
-            request.setPhoneNumber("010-9999-0000");
+		@Test
+		@DisplayName("전화번호 업데이트 성공")
+		void updateMe_PhoneNumber_Success() {
+			// given
+			ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+			request.setPhoneNumber("010-9999-0000");
 
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user));
 
-            // when
-            userService.updateMe(userId, request);
+			// when
+			userService.updateMe(userId, request);
 
-            // then
-            assertThat(user.getPhoneNumber()).isEqualTo("010-9999-0000");
-            verify(eventPublisher).publishEvent(any(UserUpdateEvent.class));
-        }
+			// then
+			assertThat(user.getPhoneNumber()).isEqualTo("010-9999-0000");
+			verify(eventPublisher).publishEvent(any(UserUpdateEvent.class));
+		}
 
-        @Test
-        @DisplayName("비밀번호 업데이트 성공")
-        void updateMe_Password_Success() {
-            // given
-            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
-            request.setPassword("newPassword123");
+		@Test
+		@DisplayName("비밀번호 업데이트 성공")
+		void updateMe_Password_Success() {
+			// given
+			ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+			request.setPassword("newPassword123");
 
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
-            given(passwordEncoder.encode("newPassword123"))
-                .willReturn("encodedNewPassword");
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user));
+			given(passwordEncoder.encode("newPassword123"))
+				.willReturn("encodedNewPassword");
 
-            // when
-            userService.updateMe(userId, request);
+			// when
+			userService.updateMe(userId, request);
 
-            // then
-            assertThat(user.getPassword()).isEqualTo("encodedNewPassword");
-            verify(passwordEncoder).encode("newPassword123");
-            verify(eventPublisher).publishEvent(any(UserUpdateEvent.class));
-        }
+			// then
+			assertThat(user.getPassword()).isEqualTo("encodedNewPassword");
+			verify(passwordEncoder).encode("newPassword123");
+			verify(eventPublisher).publishEvent(any(UserUpdateEvent.class));
+		}
 
-        @Test
-        @DisplayName("중복된 닉네임으로 업데이트 시 예외 발생")
-        void updateMe_DuplicateNickname_ThrowsException() {
-            // given
-            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
-            request.setNickname("existingNickname");
+		@Test
+		@DisplayName("중복된 닉네임으로 업데이트 시 예외 발생")
+		void updateMe_DuplicateNickname_ThrowsException() {
+			// given
+			ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+			request.setNickname("existingNickname");
 
-            UserEntity anotherUser = UserEntity.builder()
-                .userId(UUID.randomUUID())
-                .nickname("existingNickname")
-                .build();
+			UserEntity anotherUser = UserEntity.builder()
+				.userId(UUID.randomUUID())
+				.nickname("existingNickname")
+				.build();
 
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
-            given(userRepository.findByNickname("existingNickname"))
-                .willReturn(Optional.of(anotherUser));
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user));
+			given(userRepository.findByNickname("existingNickname"))
+				.willReturn(Optional.of(anotherUser));
 
-            // when & then
-            assertThatThrownBy(() -> userService.updateMe(userId, request))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NICKNAME_DUPLICATED);
-        }
+			// when & then
+			assertThatThrownBy(() -> userService.updateMe(userId, request))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NICKNAME_DUPLICATED);
+		}
 
-        @Test
-        @DisplayName("업데이트 내용이 없으면 이벤트 발행하지 않음")
-        void updateMe_NoChanges_NoEvent() {
-            // given
-            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
-            // 모든 필드가 null 또는 빈 문자열
+		@Test
+		@DisplayName("업데이트 내용이 없으면 이벤트 발행하지 않음")
+		void updateMe_NoChanges_NoEvent() {
+			// given
+			ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+			// 모든 필드가 null 또는 빈 문자열
 
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user));
 
-            // when
-            userService.updateMe(userId, request);
+			// when
+			userService.updateMe(userId, request);
 
-            // then
-            verify(eventPublisher, never()).publishEvent(any());
-        }
-    }
+			// then
+			verify(eventPublisher, never()).publishEvent(any());
+		}
+	}
 
-    @Nested
-    @DisplayName("deleteMe 메서드")
-    class DeleteMeTest {
+	@Nested
+	@DisplayName("deleteMe 메서드")
+	class DeleteMeTest {
 
-        @Test
-        @DisplayName("회원 탈퇴 성공")
-        void deleteMe_Success() {
-            // given
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
+		@Test
+		@DisplayName("회원 탈퇴 성공")
+		void deleteMe_Success() {
+			// given
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user));
 
-            // when
-            userService.deleteMe(userId);
+			// when
+			userService.deleteMe(userId);
 
-            // then
-            assertThat(user.isWithdrawn()).isTrue();
-            verify(eventPublisher).publishEvent(any(UserWithdrawnEvent.class));
-        }
+			// then
+			assertThat(user.isWithdrawn()).isTrue();
+			verify(eventPublisher).publishEvent(any(UserWithdrawnEvent.class));
+		}
 
-        @Test
-        @DisplayName("이미 탈퇴한 사용자의 탈퇴 시도 시 예외 발생")
-        void deleteMe_AlreadyWithdrawn_ThrowsException() {
-            // given
-            user.withdraw();
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
+		@Test
+		@DisplayName("이미 탈퇴한 사용자의 탈퇴 시도 시 예외 발생")
+		void deleteMe_AlreadyWithdrawn_ThrowsException() {
+			// given
+			user.withdraw();
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user));
 
-            // when & then
-            assertThatThrownBy(() -> userService.deleteMe(userId))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_WITHDRAWN);
-        }
-    }
+			// when & then
+			assertThatThrownBy(() -> userService.deleteMe(userId))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_WITHDRAWN);
+		}
+	}
 
-    @Nested
-    @DisplayName("getSalesStats 메서드")
-    class GetSalesStatsTest {
+	@Nested
+	@DisplayName("getSalesStats 메서드")
+	class GetSalesStatsTest {
 
-        @Test
-        @DisplayName("OWNER 사용자의 판매 통계 조회 성공")
-        void getSalesStats_Success() {
-            // given
-            UserEntity ownerUser = UserEntity.builder()
-                .userId(userId)
-                .email("owner@example.com")
-                .role(UserRole.OWNER)
-                .status(UserStatus.ACTIVE)
-                .build();
+		@Test
+		@DisplayName("OWNER 사용자의 판매 통계 조회 성공")
+		void getSalesStats_Success() {
+			// given
+			UserEntity ownerUser = UserEntity.builder()
+				.userId(userId)
+				.email("owner@example.com")
+				.role(UserRole.OWNER)
+				.status(UserStatus.ACTIVE)
+				.build();
 
-            LocalDate targetDate = LocalDate.of(2024, 1, 15);
+			LocalDate targetDate = LocalDate.of(2024, 1, 15);
 
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(ownerUser));
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(ownerUser));
 
-            // when
-            var result = userService.getSalesStats(userId, PeriodType.DAILY, targetDate);
+			// when
+			var result = userService.getSalesStats(userId, PeriodType.DAILY, targetDate);
 
-            // then
-            assertThat(result).isNotNull();
-            assertThat(result).hasSize(1);
-        }
+			// then
+			assertThat(result).isNotNull();
+			assertThat(result).hasSize(1);
+		}
 
-        @Test
-        @DisplayName("OWNER가 아닌 사용자의 판매 통계 조회 시 예외 발생")
-        void getSalesStats_NotOwner_ThrowsException() {
-            // given
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user)); // 일반 USER
+		@Test
+		@DisplayName("OWNER가 아닌 사용자의 판매 통계 조회 시 예외 발생")
+		void getSalesStats_NotOwner_ThrowsException() {
+			// given
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user)); // 일반 USER
 
-            // when & then
-            assertThatThrownBy(() -> userService.getSalesStats(userId, PeriodType.DAILY, LocalDate.now()))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
-        }
-    }
+			// when & then
+			assertThatThrownBy(() -> userService.getSalesStats(userId, PeriodType.DAILY, LocalDate.now()))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
+		}
+	}
 
-    @Nested
-    @DisplayName("findUserById 메서드")
-    class FindUserByIdTest {
+	@Nested
+	@DisplayName("findUserById 메서드")
+	class FindUserByIdTest {
 
-        @Test
-        @DisplayName("사용자 조회 성공")
-        void findUserById_Success() {
-            // given
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
+		@Test
+		@DisplayName("사용자 조회 성공")
+		void findUserById_Success() {
+			// given
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.of(user));
 
-            // when
-            UserEntity result = userService.findUserById(userId);
+			// when
+			UserEntity result = userService.findUserById(userId);
 
-            // then
-            assertThat(result).isEqualTo(user);
-        }
+			// then
+			assertThat(result).isEqualTo(user);
+		}
 
-        @Test
-        @DisplayName("존재하지 않는 사용자 조회 시 예외 발생")
-        void findUserById_NotFound_ThrowsException() {
-            // given
-            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.empty());
+		@Test
+		@DisplayName("존재하지 않는 사용자 조회 시 예외 발생")
+		void findUserById_NotFound_ThrowsException() {
+			// given
+			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+				.willReturn(Optional.empty());
 
-            // when & then
-            assertThatThrownBy(() -> userService.findUserById(userId))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
-        }
-    }
+			// when & then
+			assertThatThrownBy(() -> userService.findUserById(userId))
+				.isInstanceOf(CustomException.class)
+				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
+		}
+	}
 }
