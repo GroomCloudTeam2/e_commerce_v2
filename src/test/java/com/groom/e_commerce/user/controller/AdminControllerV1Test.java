@@ -21,8 +21,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -36,13 +34,11 @@ import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 import com.groom.e_commerce.user.application.service.AdminServiceV1;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerStatus;
-import com.groom.e_commerce.user.domain.entity.user.UserRole;
 import com.groom.e_commerce.user.presentation.controller.AdminControllerV1;
 import com.groom.e_commerce.user.presentation.dto.request.admin.ReqCreateManagerDtoV1;
 import com.groom.e_commerce.user.presentation.dto.request.owner.ReqRejectOwnerDtoV1;
 import com.groom.e_commerce.user.presentation.dto.response.admin.ResOwnerApprovalListDtoV1;
 import com.groom.e_commerce.user.presentation.dto.response.owner.ResOwnerApprovalDtoV1;
-import com.groom.e_commerce.user.presentation.dto.response.user.ResUserDtoV1;
 import com.groom.e_commerce.user.presentation.dto.response.user.ResUserListDtoV1;
 
 // Security 설정 클래스가 있다면 Import 추가
