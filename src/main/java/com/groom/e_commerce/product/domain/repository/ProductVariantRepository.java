@@ -52,4 +52,8 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
 	// [설계 의도] 장바구니에 담긴 여러 SKU를 한 번에 조회
 	List<ProductVariant> findByIdIn(List<UUID> ids);
+
+	// 특정 상태의 모든 Variant 조회 (재고 동기화용)
+	@Query("SELECT v FROM ProductVariant v JOIN FETCH v.product WHERE v.status = :status")
+	List<ProductVariant> findAllByStatus(@Param("status") VariantStatus status);
 }

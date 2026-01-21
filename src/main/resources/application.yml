@@ -2,11 +2,25 @@ spring:
   application:
     name: e_commerce
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 200
+          max-idle: 50
+          min-idle: 20
+
   datasource:
     url: jdbc:postgresql://localhost:5432/ecommerce
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 50
 
   jpa:
     hibernate:
@@ -23,6 +37,15 @@ spring:
     user:
       name: user
       password: 1234
+
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
+  feign:
+    circuitbreaker:
+      enabled: true
 
 
 external:
@@ -46,9 +69,10 @@ ai:
 
 logging:
   level:
-    root: ERROR
-    com.groom.ecommerce: DEBUG
-    org.hibernate.SQL: DEBUG
+    root: INFO
+    com.groom.e_commerce: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
 
 toss:
   payments:
@@ -60,3 +84,28 @@ toss:
     connect-timeout-ms: 3000
     read-timeout-ms: 5000
 
+# Resilienve4j 정책 설정 - 수정 필요
+resilience4j:
+  circuitbreaker:
+    instances:
+      tossPaymentsClient:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 20
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        minimumNumberOfCalls: 10
+        permittedNumberOfCallsInHalfOpenState: 5
+
+  retry:
+    instances:
+      tossPaymentsClient:
+        maxAttempts: 3
+        waitDuration: 200ms
+        retryExceptions:
+          - java.io.IOException
+          - feign.RetryableException
+
+  timelimiter:
+    instances:
+      tossPaymentsClient:
+        timeoutDuration: 2s

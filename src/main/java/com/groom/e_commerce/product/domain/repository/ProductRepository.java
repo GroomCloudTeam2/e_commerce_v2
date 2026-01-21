@@ -90,4 +90,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
 	boolean existsByCategoryIdAndDeletedAtIsNull(UUID categoryId);
 
+	// 옵션 없는 상품 중 특정 상태인 상품들 조회 (재고 동기화용)
+	@Query("SELECT p FROM Product p WHERE p.hasOptions = false AND p.status = :status AND p.deletedAt IS NULL")
+	List<Product> findAllByHasOptionsFalseAndStatus(@Param("status") ProductStatus status);
 }

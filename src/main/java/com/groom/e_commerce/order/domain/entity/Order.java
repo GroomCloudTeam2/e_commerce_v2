@@ -19,44 +19,82 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Getter
 @Entity
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "p_order")
 public class Order extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	/* ================= 식별자 ================= */
 
-    @Column(name = "order_id", nullable = false, unique = true)
-    private UUID orderId;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-	@Column(name = "order_number", nullable = false, unique = true)
+	@Column(name = "order_id", nullable = false, unique = true)
+	private UUID orderId;
+
+	@Column(name = "order_number", nullable = false, unique = true, length = 20)
 	private String orderNumber;
 
-    @Column(name = "buyer_id", nullable = false)
-    private UUID buyerId;
+	@Column(name = "buyer_id", nullable = false)
+	private UUID buyerId;
 
-	@Column(name = "total_payment_amount", nullable = false)
-	private BigInteger totalPaymentAmount;
+	/* ================= 금액 / 상태 ================= */
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    private OrderStatus status;
+	@Column(name = "total_payment_amt", nullable = false)
+	private Long totalPaymentAmount;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status", nullable = false, length = 20)
+	private OrderStatus status;
 
 	@OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<OrderItem> item = new ArrayList<>();
+	private final List<OrderItem> items = new ArrayList<>();
 
+	/* ================= 배송지 스냅샷 ================= */
 
-	public Order(UUID buyerId, String orderNumber, BigInteger totalAmount, List<OrderItem> items) {
+	@Column(name = "recipient_name", nullable = false, length = 50)
+	private String recipientName;
+
+	@Column(name = "recipient_phone", nullable = false, length = 20)
+	private String recipientPhone;
+
+	@Column(name = "zip_code", nullable = false, length = 10)
+	private String zipCode;
+
+	@Column(name = "shipping_address", nullable = false, length = 300)
+	private String shippingAddress;
+
+	@Column(name = "shipping_memo", length = 200)
+	private String shippingMemo;
+
+	/* ================= 생성 ================= */
+
+	@Builder
+	public Order(
+		UUID buyerId,
+		String orderNumber,
+		Long totalPaymentAmount,
+		String recipientName,
+		String recipientPhone,
+		String zipCode,
+		String shippingAddress,
+		String shippingMemo
+	) {
 		this.orderId = UUID.randomUUID();
-		this.orderNumber = orderNumber;
 		this.buyerId = buyerId;
-		this.totalPaymentAmount = totalAmount;
+		this.orderNumber = orderNumber;
+		this.totalPaymentAmount = totalPaymentAmount;
+		this.recipientName = recipientName;
+		this.recipientPhone = recipientPhone;
+		this.zipCode = zipCode;
+		this.shippingAddress = shippingAddress;
+		this.shippingMemo = shippingMemo;
 		this.status = OrderStatus.PENDING;
 	}
 

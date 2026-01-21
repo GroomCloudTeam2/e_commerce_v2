@@ -88,7 +88,35 @@ public enum ErrorCode {
 		"ORDER_SERVICE_ERROR",
 		"주문 서비스 응답 오류"
 	),
-	PRODUCT_SERVICE_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "PRODUCT_SERVICE_ERROR", "상품 서비스 응답 오류");
+    PRODUCT_SERVICE_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "PRODUCT_SERVICE_ERROR", "상품 서비스 응답 오류"),
+
+    // =====================
+    // Payment - 기본 상태
+    // =====================
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "결제 정보를 찾을 수 없습니다."),
+    PAYMENT_ALREADY_CANCELLED(HttpStatus.BAD_REQUEST, "PAYMENT_ALREADY_CANCELLED", "이미 취소된 결제입니다."),
+    PAYMENT_ALREADY_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_ALREADY_FAILED", "이미 실패 처리된 결제입니다."),
+    PAYMENT_NOT_CONFIRMABLE(HttpStatus.BAD_REQUEST, "PAYMENT_NOT_CONFIRMABLE", "결제를 승인할 수 없는 상태입니다."),
+    PAYMENT_KEY_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_KEY_MISSING", "결제 키가 존재하지 않습니다."),
+
+    // =====================
+    // Payment - 승인(Confirm)
+    // =====================
+    PAYMENT_CONFIRM_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_CONFIRM_ERROR", "결제 승인 처리 중 오류가 발생했습니다."),
+    PAYMENT_NOT_DONE(HttpStatus.BAD_REQUEST, "PAYMENT_NOT_DONE", "결제가 정상적으로 승인되지 않았습니다."),
+
+    // =====================
+    // Payment - 취소/환불
+    // =====================
+    REFUND_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "REFUND_PROCESSING_FAILED", "환불 처리 중 오류가 발생했습니다."),
+    REFUND_NOT_CANCELED(HttpStatus.INTERNAL_SERVER_ERROR, "REFUND_NOT_CANCELED", "결제 취소가 정상적으로 처리되지 않았습니다."),
+
+    // =====================
+    // Toss (외부 PG 대표 에러)
+    // =====================
+    TOSS_PROVIDER_ERROR(HttpStatus.BAD_REQUEST, "TOSS_PROVIDER_ERROR", "결제사 처리 중 일시적인 오류가 발생했습니다."),
+    TOSS_UNAUTHORIZED_KEY(HttpStatus.UNAUTHORIZED, "TOSS_UNAUTHORIZED_KEY", "결제 인증 정보가 유효하지 않습니다."),
+    TOSS_REJECTED(HttpStatus.FORBIDDEN, "TOSS_REJECTED", "결제가 거절되었습니다.");
 
 	private final HttpStatus httpStatus;
 	private final String code;

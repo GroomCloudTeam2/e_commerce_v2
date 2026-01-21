@@ -1,10 +1,31 @@
 package com.groom.e_commerce.order.application.service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.groom.e_commerce.global.presentation.advice.CustomException;
+import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 import com.groom.e_commerce.order.domain.entity.Order;
 import com.groom.e_commerce.order.domain.event.outbound.OrderCancelledEvent;
 import com.groom.e_commerce.order.domain.event.outbound.OrderConfirmedEvent;
 import com.groom.e_commerce.order.domain.event.outbound.OrderCreatedEvent;
+import com.groom.e_commerce.order.domain.entity.OrderItem;
+import com.groom.e_commerce.order.domain.repository.OrderItemRepository;
 import com.groom.e_commerce.order.domain.repository.OrderRepository;
+import com.groom.e_commerce.order.presentation.dto.request.OrderCreateItemRequest;
 import com.groom.e_commerce.order.presentation.dto.request.OrderCreateRequest;
 import com.groom.e_commerce.order.presentation.dto.response.OrderResponse;
 
@@ -21,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -42,9 +64,31 @@ public class OrderService {
         // 트랜잭션이 성공적으로 커밋된 후 결제 요청 이벤트를 발행합니다.
         eventPublisher.publishEvent(new OrderCreatedEvent(orderId));
         log.info("주문(ID: {})이 생성되었습니다. 결제 프로세스를 시작합니다.", orderId);
+			// // 5. 상품 스냅샷 생성 (OrderItem)
+			// OrderItem orderItem = OrderItem.builder()
+			// 	.order(order)
+			// 	.productId(productInfo.getProductId())
+			// 	.variantId(productInfo.getVariantId())
+			// 	.ownerId(productInfo.getOwnerId())
+			// 	.productTitle(productInfo.getProductName())
+			// 	.productThumbnail(productInfo.getThumbnailUrl())
+			// 	.optionName(productInfo.getOptionName() != null ? productInfo.getOptionName() : "기본")
+			// 	.unitPrice(productInfo.getPrice())
+			// 	.quantity(itemReq.getQuantity())
+			// 	.build();
 
         return orderId;
     }
+		// 	orderItems.add(orderItem);
+		//
+		// 	// 총액 합산
+		// 	totalAmount = totalAmount + (productInfo.getPrice()*(itemReq.getQuantity()));
+		// }
+	private String generateOrderNumber() {
+		String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+		int randomPart = ThreadLocalRandom.current().nextInt(100000, 999999);
+		return datePart + "-" + randomPart;
+	}
 
 	@Transactional(readOnly = true)
 	public
@@ -52,11 +96,18 @@ public class OrderService {
 		return orderRepository.findAllByBuyerId(buyerId, pageable)
 			.map(OrderResponse::from);
 	}
-
-	@Transactional(readOnly = true)
+	@Transactional(readOnly = true) // 중요: 조회 전용 트랜잭션 (성능 최적화)
 	public OrderResponse getOrder(UUID orderId) {
-		return OrderResponse.from(findOrderById(orderId));
+		Order order = orderRepository.findByIdWithItems(orderId)
+			.orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다. ID: " + orderId));
+
+		return OrderResponse.from(order);
 	}
+
+	// @Transactional(readOnly = true)
+	// public OrderResponse getOrder(UUID orderId) {
+	// 	return OrderResponse.from(findOrderById(orderId));
+	// }
 
 	@Transactional(readOnly = true)
 	public List<OrderResponse> getOrdersByProduct(UUID productId) {
