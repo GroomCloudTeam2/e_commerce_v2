@@ -13,7 +13,7 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 public class SwaggerConfig {
 
 	@Bean
-	public OpenAPI openAPI() {
+	public OpenAPI openAPi() {
 		// 1. 보안 스키마 설정 (JWT Bearer 방식)
 		String jwtSchemeName = "JWT Authentication";
 
