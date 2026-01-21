@@ -6,9 +6,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-public record ReqConfirmPaymentV1(
+public record ReqConfirmPayment(
 	@NotBlank String paymentKey,
 	@NotNull UUID orderId,
 	@NotNull @Min(1) Long amount
-) {
-}
+) {}
