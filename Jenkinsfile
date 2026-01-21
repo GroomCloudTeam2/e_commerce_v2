@@ -28,13 +28,12 @@ pipeline {
         }
 
         /* =========================
-         * 1️⃣ Unit & Slice Tests
+         * 1️⃣ Unit & Slice Tests ONLY
          * ========================= */
-        stage('Test (Unit & Slice)') {
+        stage('Test') {
             steps {
                 sh '''
-                  ./gradlew clean test \
-                    -Dgroups=!integration
+                  ./gradlew clean test
                 '''
             }
             post {
@@ -76,19 +75,7 @@ pipeline {
         }
 
         /* =========================
-         * 4️⃣ Integration Tests (Docker / Testcontainers)
-         * ========================= */
-        stage('Integration Tests') {
-            steps {
-                sh '''
-                  ./gradlew test \
-                    -Dgroups=integration
-                '''
-            }
-        }
-
-        /* =========================
-         * 5️⃣ Build Jar
+         * 4️⃣ Build Jar
          * ========================= */
         stage('Build') {
             steps {
@@ -97,7 +84,7 @@ pipeline {
         }
 
         /* =========================
-         * 6️⃣ Docker Build
+         * 5️⃣ Docker Build
          * ========================= */
         stage('Docker Build') {
             steps {
@@ -106,7 +93,7 @@ pipeline {
         }
 
         /* =========================
-         * 7️⃣ Trivy Image Scan
+         * 6️⃣ Trivy Image Scan
          * ========================= */
         stage('Trivy Scan') {
             steps {

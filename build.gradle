@@ -97,6 +97,12 @@ dependencyManagement {
     }
 }
 
+test {
+    useJUnitPlatform {
+        excludeTags 'integration'
+    }
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }
