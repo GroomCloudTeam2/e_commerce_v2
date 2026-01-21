@@ -1,30 +1,19 @@
 package com.groom.e_commerce.payment.presentation.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
+import com.groom.e_commerce.global.presentation.advice.CustomException;
+import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 
-public class TossApiException extends RuntimeException {
+/**
+ * Toss Payments 외부 연동 실패 예외
+ * (Feign / API 응답 에러)
+ */
+public class TossApiException extends CustomException {
 
-	private final HttpStatus status;
-	private final String code;
-	private final String tossErrorCode;
-
-	public TossApiException(HttpStatusCode statusCode, String code, String message, String tossErrorCode) {
-		super(message);
-		this.status = HttpStatus.valueOf(statusCode.value());
-		this.code = code;
-		this.tossErrorCode = tossErrorCode;
+	public TossApiException(ErrorCode errorCode) {
+		super(errorCode);
 	}
 
-	public HttpStatus getStatus() {
-		return status;
-	}
-
-	public String getCode() {
-		return code;
-	}
-
-	public String getTossErrorCode() {
-		return tossErrorCode;
+	public TossApiException(ErrorCode errorCode, String debugMessage) {
+		super(errorCode, debugMessage);
 	}
 }
