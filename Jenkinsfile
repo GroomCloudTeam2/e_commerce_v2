@@ -28,11 +28,14 @@ pipeline {
         }
 
         /* =========================
-         * 1️⃣ Test + Coverage
+         * 1️⃣ Unit & Slice Tests
          * ========================= */
-        stage('Test & Coverage') {
+        stage('Test (Unit & Slice)') {
             steps {
-                sh './gradlew clean test jacocoTestReport'
+                sh '''
+                  ./gradlew clean test \
+                    -Dgroups=!integration
+                '''
             }
             post {
                 always {
@@ -43,7 +46,7 @@ pipeline {
         }
 
         /* =========================
-         * 2️⃣ SonarCloud Analysis (with Coverage)
+         * 2️⃣ SonarCloud Analysis
          * ========================= */
         stage('SonarCloud Analysis') {
             environment {
@@ -73,7 +76,19 @@ pipeline {
         }
 
         /* =========================
-         * 4️⃣ Build Jar
+         * 4️⃣ Integration Tests (Docker / Testcontainers)
+         * ========================= */
+        stage('Integration Tests') {
+            steps {
+                sh '''
+                  ./gradlew test \
+                    -Dgroups=integration
+                '''
+            }
+        }
+
+        /* =========================
+         * 5️⃣ Build Jar
          * ========================= */
         stage('Build') {
             steps {
@@ -82,7 +97,7 @@ pipeline {
         }
 
         /* =========================
-         * 5️⃣ Docker Build
+         * 6️⃣ Docker Build
          * ========================= */
         stage('Docker Build') {
             steps {
@@ -91,7 +106,7 @@ pipeline {
         }
 
         /* =========================
-         * 6️⃣ Trivy Image Scan
+         * 7️⃣ Trivy Image Scan
          * ========================= */
         stage('Trivy Scan') {
             steps {
