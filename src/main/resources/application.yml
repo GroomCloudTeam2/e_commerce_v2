@@ -39,6 +39,12 @@ spring:
       password: 1234
 
 
+external:
+  product-service:
+    url: http://localhost:8080
+  order-service:
+    url: http://localhost:8080
+
 jwt:
   secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
   access-token-validity: 3600000

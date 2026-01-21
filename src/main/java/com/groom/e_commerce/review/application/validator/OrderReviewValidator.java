@@ -4,11 +4,12 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
-import com.groom.e_commerce.order.domain.entity.Order;
-import com.groom.e_commerce.order.domain.repository.OrderItemRepository;
-import com.groom.e_commerce.order.domain.repository.OrderRepository;
-import com.groom.e_commerce.order.domain.status.OrderStatus;
+import com.groom.e_commerce.global.presentation.advice.CustomException;
+import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 import com.groom.e_commerce.review.domain.repository.ReviewRepository;
+import com.groom.e_commerce.review.infrastructure.feign.OrderClient;
+import com.groom.e_commerce.review.infrastructure.feign.dto.OrderReviewValidationRequest;
+import com.groom.e_commerce.review.infrastructure.feign.dto.OrderReviewValidationResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -16,39 +17,41 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OrderReviewValidator {
 
-	private final OrderRepository orderRepository;
-	private final OrderItemRepository orderItemRepository;
+	private final OrderClient orderClient;
 	private final ReviewRepository reviewRepository;
 
 	public void validate(UUID orderId, UUID productId, UUID userId) {
 
-		// 1. 주문 존재 여부
-		Order order = orderRepository.findById(orderId)
-			.orElseThrow(() ->
-				new IllegalArgumentException("주문이 존재하지 않습니다.")
-			);
-
-		// 리뷰 중복 체크
+		// 1️⃣ 리뷰 중복 체크 (Review 도메인 책임)
 		reviewRepository.findByOrderIdAndProductId(orderId, productId)
 			.ifPresent(r -> {
-				throw new IllegalStateException("이미 리뷰가 존재합니다.");
+				throw new CustomException(ErrorCode.REVIEW_ALREADY_EXISTS);
 			});
 
-		// 2. 주문 소유자 검증
-		if (!order.getBuyerId().equals(userId)) {
-			throw new SecurityException("본인의 주문만 리뷰할 수 있습니다.");
+		// 2️⃣ Order 서비스에 리뷰 검증 요청
+		OrderReviewValidationResponse response =
+			orderClient.validateReviewOrder(
+				new OrderReviewValidationRequest(orderId, productId, userId)
+			);
+
+		// 3️⃣ 주문 존재 여부
+		if (!response.isOrderExists()) {
+			throw new CustomException(ErrorCode.ORDER_NOT_FOUND);
 		}
 
-		// 3. 주문에 해당 상품이 포함되어 있는지
-		boolean containsProduct =
-			orderItemRepository.existsByOrderIdAndProductId(orderId, productId);
-
-		if (!containsProduct) {
-			throw new IllegalArgumentException("주문한 상품이 아닙니다.");
+		// 4️⃣ 주문 소유자 검증
+		if (!response.isOwnerMatched()) {
+			throw new CustomException(ErrorCode.FORBIDDEN);
 		}
 
-		if (!order.getStatus().equals(OrderStatus.CONFIRMED)) {
-			throw new IllegalStateException("리뷰 가능한 주문 상태가 아닙니다.");
+		// 5️⃣ 주문 상품 포함 여부
+		if (!response.isContainsProduct()) {
+			throw new CustomException(ErrorCode.INVALID_REQUEST);
+		}
+
+		// 6️⃣ 리뷰 가능한 주문 상태인지
+		if (!response.isReviewable()) {
+			throw new CustomException(ErrorCode.REVIEW_NOT_ALLOWED_ORDER_STATUS);
 		}
 	}
 }

@@ -3,6 +3,7 @@ package com.groom.e_commerce.review.application.service;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.groom.e_commerce.global.infrastructure.client.Classification.AiRestClient;
+import com.groom.e_commerce.review.application.event.ReviewCreatedEvent;
 import com.groom.e_commerce.review.application.validator.OrderReviewValidator;
 import com.groom.e_commerce.review.domain.entity.ProductRatingEntity;
 import com.groom.e_commerce.review.domain.entity.ReviewCategory;
@@ -39,6 +41,8 @@ public class ReviewService {
 	private final ProductRatingRepository productRatingRepository;
 	private final AiRestClient aiRestClient;
 	private final OrderReviewValidator orderReviewValidator;
+	private final ApplicationEventPublisher applicationEventPublisher;
+
 
 	private static final String SORT_CREATED_AT = "createdAt";
 	private static final String NO_REVIEW="리뷰가 존재하지 않습니다.";
@@ -82,13 +86,13 @@ public class ReviewService {
 
 		reviewRepository.save(review);
 
-		// 3. 상품 평점 업데이트
-		ProductRatingEntity ratingEntity =
-			productRatingRepository.findByProductId(productId)
-				.orElseGet(() -> new ProductRatingEntity(productId));
-
-		ratingEntity.updateRating(request.getRating());
-		productRatingRepository.save(ratingEntity);
+		applicationEventPublisher.publishEvent(
+			new ReviewCreatedEvent(
+				review.getReviewId(),
+				review.getProductId(),
+				request.getRating()
+			)
+		);
 
 		return ReviewResponse.fromEntity(review);
 	}

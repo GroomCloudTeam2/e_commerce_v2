@@ -21,6 +21,14 @@ public interface ReviewRepository extends JpaRepository<ReviewEntity, UUID> {
 	Page<ReviewEntity> findAllByProductId(UUID productId, Pageable pageable);
 
 	@Query("""
+    SELECT r
+    FROM ReviewEntity r
+    WHERE r.productId = :productId
+""")
+	List<ReviewEntity> findAllByProductIdForRebuild(UUID productId);
+
+
+	@Query("""
 		    SELECT r FROM ReviewEntity r
 		    WHERE r.productId = :productId
 		      AND r.category = :category

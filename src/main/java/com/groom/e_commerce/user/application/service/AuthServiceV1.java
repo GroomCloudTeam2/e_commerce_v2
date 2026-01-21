@@ -2,24 +2,27 @@ package com.groom.e_commerce.user.application.service;
 
 import java.util.Optional;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import com.groom.e_commerce.global.infrastructure.config.security.JwtUtil;
 import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
+import com.groom.e_commerce.global.infrastructure.config.security.JwtUtil;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerEntity;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerStatus;
 import com.groom.e_commerce.user.domain.entity.user.UserEntity;
 import com.groom.e_commerce.user.domain.entity.user.UserRole;
 import com.groom.e_commerce.user.domain.entity.user.UserStatus;
+import com.groom.e_commerce.user.domain.event.OwnerSignedUpEvent;
+import com.groom.e_commerce.user.domain.event.UserSignedUpEvent;
 import com.groom.e_commerce.user.domain.repository.OwnerRepository;
 import com.groom.e_commerce.user.domain.repository.UserRepository;
 import com.groom.e_commerce.user.presentation.dto.request.user.ReqLoginDtoV1;
-import com.groom.e_commerce.user.presentation.dto.request.user.ReqSignupDtoV1;
-import com.groom.e_commerce.user.presentation.dto.response.user.ResTokenDtoV1;
+import com.groom.e_commerce.user.presentation.dto.request.user.ReqSignupDtoV1;import com.groom.e_commerce.user.presentation.dto.response.user.ResTokenDtoV1;
+
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,8 +35,10 @@ public class AuthServiceV1 {
 
 	private final UserRepository userRepository;
 	private final OwnerRepository ownerRepository;
-	private final PasswordEncoder passwordEncoder;
+	// private final PasswordEncoder passwordEncoder;
+	private final ApplicationEventPublisher eventPublisher;
 	private final JwtUtil jwtUtil;
+	private final PasswordEncoder passwordEncoder;
 
 	@Transactional
 	public void signup(ReqSignupDtoV1 request) {
@@ -66,10 +71,25 @@ public class AuthServiceV1 {
 		if (request.isOwner()) {
 			validateOwnerFields(request);
 			UserEntity user = createAndSaveUser(request);
-			createAndSaveOwner(user, request);
+			OwnerEntity owner = createAndSaveOwner(user, request);
+
+			eventPublisher.publishEvent(new OwnerSignedUpEvent(
+				user.getUserId(),
+				owner.getOwnerId(),
+				user.getEmail(),
+				owner.getStoreName()
+			));
+
 			log.info("OWNER signed up with store: {}", request.getStore());
 		} else {
-			createAndSaveUser(request);
+			UserEntity user = createAndSaveUser(request);
+
+			eventPublisher.publishEvent(new UserSignedUpEvent(
+				user.getUserId(),
+				user.getEmail(),
+				user.getRole()
+			));
+
 			log.info("User signed up: {}", request.getEmail());
 		}
 	}
@@ -86,7 +106,7 @@ public class AuthServiceV1 {
 		return userRepository.save(user);
 	}
 
-	private void createAndSaveOwner(UserEntity user, ReqSignupDtoV1 request) {
+	private OwnerEntity createAndSaveOwner(UserEntity user, ReqSignupDtoV1 request) {
 		OwnerEntity owner = OwnerEntity.builder()
 			.user(user)
 			.storeName(request.getStore())
@@ -99,7 +119,7 @@ public class AuthServiceV1 {
 			.ownerStatus(OwnerStatus.PENDING)
 			.build();
 
-		ownerRepository.save(owner);
+		return ownerRepository.save(owner);
 	}
 
 	public ResTokenDtoV1 login(ReqLoginDtoV1 request) {

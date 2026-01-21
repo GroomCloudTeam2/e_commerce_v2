@@ -2,27 +2,22 @@ package com.groom.e_commerce.cart.presentation.dto.request;
 
 import java.util.UUID;
 
-import com.groom.e_commerce.product.application.dto.StockManagement;
-
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
+
 
 @Getter
-@SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
 public class CartAddRequest {
 
-	@NotNull
-	private UUID productId;
+    private UUID productId;
+    private UUID variantId;
+    private int quantity;
 
-	private UUID variantId;
-
-	@Min(1)
-	private Integer quantity;
+    // 테스트 / 내부 생성용
+    public CartAddRequest(UUID productId, UUID variantId, int quantity) {
+        this.productId = productId;
+        this.variantId = variantId;
+        this.quantity = quantity;
+    }
 }

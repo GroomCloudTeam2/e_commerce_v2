@@ -1,38 +1,37 @@
 package com.groom.e_commerce.review.application.validator;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.*;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.groom.e_commerce.order.domain.entity.Order;
-import com.groom.e_commerce.order.domain.repository.OrderItemRepository;
-import com.groom.e_commerce.order.domain.repository.OrderRepository;
-import com.groom.e_commerce.order.domain.status.OrderStatus;
+import com.groom.e_commerce.global.presentation.advice.CustomException;
+import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 import com.groom.e_commerce.review.domain.repository.ReviewRepository;
+import com.groom.e_commerce.review.infrastructure.feign.OrderClient;
+import com.groom.e_commerce.review.infrastructure.feign.dto.OrderReviewValidationRequest;
+import com.groom.e_commerce.review.infrastructure.feign.dto.OrderReviewValidationResponse;
 
 @ExtendWith(MockitoExtension.class)
 class OrderReviewValidatorTest {
 
-	@InjectMocks
-	private OrderReviewValidator validator;
-
 	@Mock
-	private OrderRepository orderRepository;
-
-	@Mock
-	private OrderItemRepository orderItemRepository;
+	private OrderClient orderClient;
 
 	@Mock
 	private ReviewRepository reviewRepository;
+
+	@InjectMocks
+	private OrderReviewValidator validator;
 
 	private UUID orderId;
 	private UUID productId;
@@ -46,94 +45,122 @@ class OrderReviewValidatorTest {
 	}
 
 	@Test
-	void 정상적인_주문이면_검증_통과() {
-		Order order = mock(Order.class);
+	@DisplayName("이미 리뷰가 존재하면 REVIEW_ALREADY_EXISTS 예외 발생")
+	void alreadyReviewed() {
+		// given
+		given(reviewRepository.findByOrderIdAndProductId(orderId, productId))
+			.willReturn(Optional.of(mock()));
 
-		when(orderRepository.findById(orderId))
-			.thenReturn(Optional.of(order));
-		when(reviewRepository.findByOrderIdAndProductId(orderId, productId))
-			.thenReturn(Optional.empty());
-		when(order.getBuyerId()).thenReturn(userId);
-		when(orderItemRepository.existsByOrderIdAndProductId(orderId, productId))
-			.thenReturn(true);
-		when(order.getStatus()).thenReturn(OrderStatus.CONFIRMED);
+		// when & then
+		CustomException ex = catchThrowableOfType(
+			() -> validator.validate(orderId, productId, userId),
+			CustomException.class
+		);
 
+		assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.REVIEW_ALREADY_EXISTS);
+		then(orderClient).shouldHaveNoInteractions();
+	}
+
+	@Test
+	@DisplayName("주문이 존재하지 않으면 ORDER_NOT_FOUND 예외 발생")
+	void orderNotFound() {
+		// given
+		given(reviewRepository.findByOrderIdAndProductId(orderId, productId))
+			.willReturn(Optional.empty());
+
+		given(orderClient.validateReviewOrder(any(OrderReviewValidationRequest.class)))
+			.willReturn(new OrderReviewValidationResponse(
+				false, false, false, null, false
+			));
+
+		// when & then
+		CustomException ex = catchThrowableOfType(
+			() -> validator.validate(orderId, productId, userId),
+			CustomException.class
+		);
+
+		assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.ORDER_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("주문 소유자가 아니면 FORBIDDEN 예외 발생")
+	void notOwner() {
+		// given
+		given(reviewRepository.findByOrderIdAndProductId(orderId, productId))
+			.willReturn(Optional.empty());
+
+		given(orderClient.validateReviewOrder(any()))
+			.willReturn(new OrderReviewValidationResponse(
+				true, false, true, "CONFIRMED", true
+			));
+
+		// when & then
+		CustomException ex = catchThrowableOfType(
+			() -> validator.validate(orderId, productId, userId),
+			CustomException.class
+		);
+
+		assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN);
+	}
+
+	@Test
+	@DisplayName("주문에 상품이 포함되지 않으면 INVALID_REQUEST 예외 발생")
+	void productNotInOrder() {
+		// given
+		given(reviewRepository.findByOrderIdAndProductId(orderId, productId))
+			.willReturn(Optional.empty());
+
+		given(orderClient.validateReviewOrder(any()))
+			.willReturn(new OrderReviewValidationResponse(
+				true, true, false, "CONFIRMED", true
+			));
+
+		// when & then
+		CustomException ex = catchThrowableOfType(
+			() -> validator.validate(orderId, productId, userId),
+			CustomException.class
+		);
+
+		assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("리뷰 가능한 주문 상태가 아니면 REVIEW_NOT_ALLOWED_ORDER_STATUS 예외 발생")
+	void notReviewableStatus() {
+		// given
+		given(reviewRepository.findByOrderIdAndProductId(orderId, productId))
+			.willReturn(Optional.empty());
+
+		given(orderClient.validateReviewOrder(any()))
+			.willReturn(new OrderReviewValidationResponse(
+				true, true, true, "CANCELLED", false
+			));
+
+		// when & then
+		CustomException ex = catchThrowableOfType(
+			() -> validator.validate(orderId, productId, userId),
+			CustomException.class
+		);
+
+		assertThat(ex.getErrorCode())
+			.isEqualTo(ErrorCode.REVIEW_NOT_ALLOWED_ORDER_STATUS);
+	}
+
+	@Test
+	@DisplayName("모든 조건을 만족하면 예외 없이 통과")
+	void success() {
+		// given
+		given(reviewRepository.findByOrderIdAndProductId(orderId, productId))
+			.willReturn(Optional.empty());
+
+		given(orderClient.validateReviewOrder(any()))
+			.willReturn(new OrderReviewValidationResponse(
+				true, true, true, "CONFIRMED", true
+			));
+
+		// when & then
 		assertThatCode(() ->
 			validator.validate(orderId, productId, userId)
 		).doesNotThrowAnyException();
-	}
-
-	@Test
-	void 주문이_없으면_예외() {
-		when(orderRepository.findById(orderId))
-			.thenReturn(Optional.empty());
-
-		assertThatThrownBy(() ->
-			validator.validate(orderId, productId, userId)
-		).isInstanceOf(IllegalArgumentException.class);
-	}
-
-	@Test
-	void 이미_리뷰가_있으면_예외() {
-		Order order = mock(Order.class);
-
-		when(orderRepository.findById(orderId))
-			.thenReturn(Optional.of(order));
-		when(reviewRepository.findByOrderIdAndProductId(orderId, productId))
-			.thenReturn(Optional.of(mock()));
-
-		assertThatThrownBy(() ->
-			validator.validate(orderId, productId, userId)
-		).isInstanceOf(IllegalStateException.class);
-	}
-
-	@Test
-	void 본인_주문이_아니면_예외() {
-		Order order = mock(Order.class);
-
-		when(orderRepository.findById(orderId))
-			.thenReturn(Optional.of(order));
-		when(reviewRepository.findByOrderIdAndProductId(orderId, productId))
-			.thenReturn(Optional.empty());
-		when(order.getBuyerId()).thenReturn(UUID.randomUUID());
-
-		assertThatThrownBy(() ->
-			validator.validate(orderId, productId, userId)
-		).isInstanceOf(SecurityException.class);
-	}
-
-	@Test
-	void 주문에_상품이_없으면_예외() {
-		Order order = mock(Order.class);
-
-		when(orderRepository.findById(orderId))
-			.thenReturn(Optional.of(order));
-		when(reviewRepository.findByOrderIdAndProductId(orderId, productId))
-			.thenReturn(Optional.empty());
-		when(order.getBuyerId()).thenReturn(userId);
-		when(orderItemRepository.existsByOrderIdAndProductId(orderId, productId))
-			.thenReturn(false);
-
-		assertThatThrownBy(() ->
-			validator.validate(orderId, productId, userId)
-		).isInstanceOf(IllegalArgumentException.class);
-	}
-
-	@Test
-	void 주문_상태가_CONFIRMED가_아니면_예외() {
-		Order order = mock(Order.class);
-
-		when(orderRepository.findById(orderId))
-			.thenReturn(Optional.of(order));
-		when(reviewRepository.findByOrderIdAndProductId(orderId, productId))
-			.thenReturn(Optional.empty());
-		when(order.getBuyerId()).thenReturn(userId);
-		when(orderItemRepository.existsByOrderIdAndProductId(orderId, productId))
-			.thenReturn(true);
-		when(order.getStatus()).thenReturn(OrderStatus.CANCELLED);
-
-		assertThatThrownBy(() ->
-			validator.validate(orderId, productId, userId)
-		).isInstanceOf(IllegalStateException.class);
 	}
 }
