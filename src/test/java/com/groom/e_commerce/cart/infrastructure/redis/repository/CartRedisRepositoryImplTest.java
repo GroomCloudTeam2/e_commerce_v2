@@ -1,5 +1,8 @@
-package com.groom.e_commerce.cart.infrastructure.redis;
+package com.groom.e_commerce.cart.infrastructure.redis.repository;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,6 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import com.groom.e_commerce.cart.domain.model.CartItem;
+import com.groom.e_commerce.cart.domain.model.CartItemKey;
 import com.groom.e_commerce.cart.domain.repository.CartRepository;
 import com.groom.e_commerce.cart.infrastructure.redis.support.CartRedisKeyGenerator;
 
@@ -36,8 +40,6 @@ class CartRedisRepositoryImplTest {
 		registry.add("spring.redis.host", redis::getHost);
 		registry.add("spring.redis.port", () -> redis.getMappedPort(6379));
 	}
-}
-
 
 	@Autowired
 	CartRepository cartRepository;

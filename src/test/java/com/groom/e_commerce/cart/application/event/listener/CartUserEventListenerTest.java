@@ -11,24 +11,22 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.groom.e_commerce.cart.application.CartService;
-import com.groom.e_commerce.cart.application.event.OrderConfirmedEvent;
+import com.groom.e_commerce.cart.application.event.UserDeletedEvent;
 
 @ExtendWith(MockitoExtension.class)
-class CartOrderEventListenerTest {
+class CartUserEventListenerTest {
 
 	@InjectMocks
-	private CartOrderEventListener listener;
+	private CartUserEventListener listener;
 
 	@Mock
 	private CartService cartService;
 
 	@Test
-	void handle_shouldClearCart_whenOrderConfirmedEventReceived() {
+	void handle_shouldClearCart_whenUserDeletedEventReceived() {
 		// given
 		UUID userId = UUID.randomUUID();
-		UUID orderId = UUID.randomUUID();
-
-		OrderConfirmedEvent event = new OrderConfirmedEvent(userId, orderId);
+		UserDeletedEvent event = new UserDeletedEvent(userId);
 
 		// when
 		listener.handle(event);
