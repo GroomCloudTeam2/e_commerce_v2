@@ -1,8 +1,8 @@
 package com.groom.e_commerce.payment.domain.model;
 
 public enum PaymentStatus {
-	READY,      // 결제 준비(주문 생성 직후)
-	PAID,       // 결제 완료
-	CANCELLED,  // 전액 취소 완료
-	FAILED      // 결제 실패
+	READY,      // 주문 생성 이벤트 수신 후 결제 대기
+	PAID,       // 토스 승인(DONE) 확정
+	FAILED,     // 토스 승인 실패(ABORTED/EXPIRED 등)
+	CANCELLED   // 환불 성공
 }
