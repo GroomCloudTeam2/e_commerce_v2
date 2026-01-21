@@ -1,10 +1,10 @@
 package com.groom.e_commerce.user;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,14 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
-import com.groom.e_commerce.global.util.SecurityUtil;
-import com.groom.e_commerce.user.application.service.UserServiceV1;
 import com.groom.e_commerce.user.domain.entity.address.AddressEntity;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerEntity;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerStatus;
@@ -30,381 +28,347 @@ import com.groom.e_commerce.user.domain.entity.user.PeriodType;
 import com.groom.e_commerce.user.domain.entity.user.UserEntity;
 import com.groom.e_commerce.user.domain.entity.user.UserRole;
 import com.groom.e_commerce.user.domain.entity.user.UserStatus;
+import com.groom.e_commerce.user.domain.event.UserUpdateEvent;
+import com.groom.e_commerce.user.domain.event.UserWithdrawnEvent;
 import com.groom.e_commerce.user.domain.repository.AddressRepository;
 import com.groom.e_commerce.user.domain.repository.OwnerRepository;
 import com.groom.e_commerce.user.domain.repository.UserRepository;
 import com.groom.e_commerce.user.presentation.dto.request.user.ReqUpdateUserDtoV1;
-import com.groom.e_commerce.user.presentation.dto.response.owner.ResSalesStatDtoV1;
 import com.groom.e_commerce.user.presentation.dto.response.user.ResUserDtoV1;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("UserServiceV1 테스트")
+@DisplayName("UserServiceV1 단위 테스트")
 class UserServiceV1Test {
 
-	@InjectMocks
-	private UserServiceV1 userService;
+    @Mock
+    private UserRepository userRepository;
 
-	@Mock
-	private UserRepository userRepository;
+    @Mock
+    private AddressRepository addressRepository;
 
-	@Mock
-	private AddressRepository addressRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
-	@Mock
-	private PasswordEncoder passwordEncoder;
+    @Mock
+    private OwnerRepository ownerRepository;
 
-	@Mock
-	private OwnerRepository ownerRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
-	private UserEntity normalUser;
-	private UserEntity ownerUser;
-	private AddressEntity defaultAddress;
-	private OwnerEntity ownerEntity;
-	private UUID userId;
+    @InjectMocks
+    private UserServiceV1 userService;
 
-	@BeforeEach
-	void setUp() {
-		userId = UUID.randomUUID();
+    private UUID userId;
+    private UserEntity user;
+    private AddressEntity defaultAddress;
 
-		// 일반 유저
-		normalUser = UserEntity.builder()
-			.userId(userId)
-			.email("user@test.com")
-			.password("encodedPassword")
-			.nickname("테스트유저")
-			.phoneNumber("010-1234-5678")
-			.role(UserRole.USER)
-			.status(UserStatus.ACTIVE)
-			.build();
+    @BeforeEach
+    void setUp() {
+        userId = UUID.randomUUID();
+        user = UserEntity.builder()
+            .userId(userId)
+            .email("test@example.com")
+            .password("encodedPassword")
+            .nickname("testUser")
+            .phoneNumber("010-1234-5678")
+            .role(UserRole.USER)
+            .status(UserStatus.ACTIVE)
+            .build();
 
-		// Owner 유저
-		ownerUser = UserEntity.builder()
-			.userId(userId)
-			.email("owner@test.com")
-			.password("encodedPassword")
-			.nickname("테스트오너")
-			.phoneNumber("010-1111-2222")
-			.role(UserRole.OWNER)
-			.status(UserStatus.ACTIVE)
-			.build();
+        defaultAddress = AddressEntity.builder()
+            .addressId(UUID.randomUUID())
+            .user(user)
+            .zipCode("12345")
+            .address("서울시 강남구")
+            .detailAddress("테스트빌딩 101호")
+            .recipient("홍길동")
+            .recipientPhone("010-1111-2222")
+            .isDefault(true)
+            .build();
+    }
 
-		// 기본 배송지
-		defaultAddress = AddressEntity.builder()
-			.addressId(UUID.randomUUID())
-			.user(normalUser)
-			.zipCode("12345")
-			.address("서울시 강남구")
-			.detailAddress("101호")
-			.recipient("수령인")
-			.recipientPhone("010-9999-8888")
-			.isDefault(true)
-			.build();
+    @Nested
+    @DisplayName("getMe 메서드")
+    class GetMeTest {
 
-		// Owner 엔티티
-		ownerEntity = OwnerEntity.builder()
-			.ownerId(UUID.randomUUID())
-			.user(ownerUser)
-			.storeName("테스트가게")
-			.ownerStatus(OwnerStatus.APPROVED)
-			.build();
-	}
+        @Test
+        @DisplayName("일반 사용자 정보 조회 성공")
+        void getMe_Success_ForUser() {
+            // given
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
+            given(addressRepository.findByUserUserIdAndIsDefaultTrue(userId))
+                .willReturn(Optional.of(defaultAddress));
 
-	@Nested
-	@DisplayName("내 정보 조회 테스트")
-	class GetMeTest {
+            // when
+            ResUserDtoV1 result = userService.getMe(userId);
 
-		@Test
-		@DisplayName("일반 유저 내 정보 조회 성공")
-		void getMe_normalUser_success() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(normalUser));
-				given(addressRepository.findByUserUserIdAndIsDefaultTrue(userId))
-					.willReturn(Optional.of(defaultAddress));
+            // then
+            assertThat(result).isNotNull();
+            verify(userRepository).findByUserIdAndDeletedAtIsNull(userId);
+            verify(addressRepository).findByUserUserIdAndIsDefaultTrue(userId);
+            verify(ownerRepository, never()).findByUserUserIdAndDeletedAtIsNull(any());
+        }
 
-				// when
-				ResUserDtoV1 result = userService.getMe();
+        @Test
+        @DisplayName("OWNER 사용자 정보 조회 시 Owner 정보 포함")
+        void getMe_Success_ForOwner() {
+            // given
+            UserEntity ownerUser = UserEntity.builder()
+                .userId(userId)
+                .email("owner@example.com")
+                .password("encodedPassword")
+                .nickname("ownerUser")
+                .phoneNumber("010-9999-8888")
+                .role(UserRole.OWNER)
+                .status(UserStatus.ACTIVE)
+                .build();
 
-				// then
-				assertThat(result).isNotNull();
-				assertThat(result.getEmail()).isEqualTo("user@test.com");
-				assertThat(result.getNickname()).isEqualTo("테스트유저");
-				assertThat(result.getDefaultAddress()).isNotNull();
-				assertThat(result.getOwnerInfo()).isNull();
-			}
-		}
+            OwnerEntity owner = OwnerEntity.builder()
+                .ownerId(UUID.randomUUID())
+                .user(ownerUser)
+                .storeName("테스트스토어")
+                .ownerStatus(OwnerStatus.APPROVED)
+                .build();
 
-		@Test
-		@DisplayName("Owner 유저 내 정보 조회 성공 (ownerInfo 포함)")
-		void getMe_ownerUser_success() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(ownerUser));
-				given(addressRepository.findByUserUserIdAndIsDefaultTrue(userId))
-					.willReturn(Optional.empty());
-				given(ownerRepository.findByUserUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(ownerEntity));
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(ownerUser));
+            given(addressRepository.findByUserUserIdAndIsDefaultTrue(userId))
+                .willReturn(Optional.empty());
+            given(ownerRepository.findByUserUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(owner));
 
-				// when
-				ResUserDtoV1 result = userService.getMe();
+            // when
+            ResUserDtoV1 result = userService.getMe(userId);
 
-				// then
-				assertThat(result).isNotNull();
-				assertThat(result.getEmail()).isEqualTo("owner@test.com");
-				assertThat(result.getRole()).isEqualTo(UserRole.OWNER);
-				assertThat(result.getOwnerInfo()).isNotNull();
-			}
-		}
+            // then
+            assertThat(result).isNotNull();
+            verify(ownerRepository).findByUserUserIdAndDeletedAtIsNull(userId);
+        }
 
-		@Test
-		@DisplayName("존재하지 않는 유저 조회 시 실패")
-		void getMe_userNotFound_fail() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.empty());
+        @Test
+        @DisplayName("존재하지 않는 사용자 조회 시 예외 발생")
+        void getMe_UserNotFound() {
+            // given
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.empty());
 
-				// when & then
-				assertThatThrownBy(() -> userService.getMe())
-					.isInstanceOf(CustomException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
-			}
-		}
-	}
+            // when & then
+            assertThatThrownBy(() -> userService.getMe(userId))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
+        }
+    }
 
-	@Nested
-	@DisplayName("내 정보 수정 테스트")
-	class UpdateMeTest {
+    @Nested
+    @DisplayName("updateMe 메서드")
+    class UpdateMeTest {
 
-		@Test
-		@DisplayName("닉네임 수정 성공")
-		void updateMe_nickname_success() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
-				request.setNickname("새닉네임");
+        @Test
+        @DisplayName("닉네임 업데이트 성공")
+        void updateMe_Nickname_Success() {
+            // given
+            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+            request.setNickname("newNickname");
 
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(normalUser));
-				given(userRepository.findByNickname("새닉네임"))
-					.willReturn(Optional.empty());
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
+            given(userRepository.findByNickname("newNickname"))
+                .willReturn(Optional.empty());
 
-				// when & then
-				assertThatCode(() -> userService.updateMe(request))
-					.doesNotThrowAnyException();
+            // when
+            userService.updateMe(userId, request);
 
-				assertThat(normalUser.getNickname()).isEqualTo("새닉네임");
-			}
-		}
+            // then
+            assertThat(user.getNickname()).isEqualTo("newNickname");
+            verify(eventPublisher).publishEvent(any(UserUpdateEvent.class));
+        }
 
-		@Test
-		@DisplayName("전화번호 수정 성공")
-		void updateMe_phoneNumber_success() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
-				request.setPhoneNumber("010-9999-0000");
+        @Test
+        @DisplayName("전화번호 업데이트 성공")
+        void updateMe_PhoneNumber_Success() {
+            // given
+            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+            request.setPhoneNumber("010-9999-0000");
 
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(normalUser));
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
 
-				// when & then
-				assertThatCode(() -> userService.updateMe(request))
-					.doesNotThrowAnyException();
+            // when
+            userService.updateMe(userId, request);
 
-				assertThat(normalUser.getPhoneNumber()).isEqualTo("010-9999-0000");
-			}
-		}
+            // then
+            assertThat(user.getPhoneNumber()).isEqualTo("010-9999-0000");
+            verify(eventPublisher).publishEvent(any(UserUpdateEvent.class));
+        }
 
-		@Test
-		@DisplayName("비밀번호 수정 성공")
-		void updateMe_password_success() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
-				request.setPassword("newPassword123");
+        @Test
+        @DisplayName("비밀번호 업데이트 성공")
+        void updateMe_Password_Success() {
+            // given
+            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+            request.setPassword("newPassword123");
 
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(normalUser));
-				given(passwordEncoder.encode("newPassword123"))
-					.willReturn("newEncodedPassword");
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
+            given(passwordEncoder.encode("newPassword123"))
+                .willReturn("encodedNewPassword");
 
-				// when & then
-				assertThatCode(() -> userService.updateMe(request))
-					.doesNotThrowAnyException();
+            // when
+            userService.updateMe(userId, request);
 
-				assertThat(normalUser.getPassword()).isEqualTo("newEncodedPassword");
-			}
-		}
+            // then
+            assertThat(user.getPassword()).isEqualTo("encodedNewPassword");
+            verify(passwordEncoder).encode("newPassword123");
+            verify(eventPublisher).publishEvent(any(UserUpdateEvent.class));
+        }
 
-		@Test
-		@DisplayName("중복된 닉네임으로 수정 시 실패")
-		void updateMe_duplicateNickname_fail() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
-				request.setNickname("중복닉네임");
+        @Test
+        @DisplayName("중복된 닉네임으로 업데이트 시 예외 발생")
+        void updateMe_DuplicateNickname_ThrowsException() {
+            // given
+            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+            request.setNickname("existingNickname");
 
-				UserEntity anotherUser = UserEntity.builder()
-					.userId(UUID.randomUUID())
-					.nickname("중복닉네임")
-					.build();
+            UserEntity anotherUser = UserEntity.builder()
+                .userId(UUID.randomUUID())
+                .nickname("existingNickname")
+                .build();
 
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(normalUser));
-				given(userRepository.findByNickname("중복닉네임"))
-					.willReturn(Optional.of(anotherUser));
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
+            given(userRepository.findByNickname("existingNickname"))
+                .willReturn(Optional.of(anotherUser));
 
-				// when & then
-				assertThatThrownBy(() -> userService.updateMe(request))
-					.isInstanceOf(CustomException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NICKNAME_DUPLICATED);
-			}
-		}
-	}
+            // when & then
+            assertThatThrownBy(() -> userService.updateMe(userId, request))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NICKNAME_DUPLICATED);
+        }
 
-	@Nested
-	@DisplayName("회원 탈퇴 테스트")
-	class DeleteMeTest {
+        @Test
+        @DisplayName("업데이트 내용이 없으면 이벤트 발행하지 않음")
+        void updateMe_NoChanges_NoEvent() {
+            // given
+            ReqUpdateUserDtoV1 request = new ReqUpdateUserDtoV1();
+            // 모든 필드가 null 또는 빈 문자열
 
-		@Test
-		@DisplayName("회원 탈퇴 성공")
-		void deleteMe_success() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(normalUser));
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
 
-				// when & then
-				assertThatCode(() -> userService.deleteMe())
-					.doesNotThrowAnyException();
+            // when
+            userService.updateMe(userId, request);
 
-				assertThat(normalUser.isWithdrawn()).isTrue();
-			}
-		}
+            // then
+            verify(eventPublisher, never()).publishEvent(any());
+        }
+    }
 
-		@Test
-		@DisplayName("이미 탈퇴한 유저 탈퇴 시도 시 실패")
-		void deleteMe_alreadyWithdrawn_fail() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				UserEntity withdrawnUser = UserEntity.builder()
-					.userId(userId)
-					.status(UserStatus.WITHDRAWN)
-					.build();
+    @Nested
+    @DisplayName("deleteMe 메서드")
+    class DeleteMeTest {
 
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(withdrawnUser));
+        @Test
+        @DisplayName("회원 탈퇴 성공")
+        void deleteMe_Success() {
+            // given
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
 
-				// when & then
-				assertThatThrownBy(() -> userService.deleteMe())
-					.isInstanceOf(CustomException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_WITHDRAWN);
-			}
-		}
-	}
+            // when
+            userService.deleteMe(userId);
 
-	@Nested
-	@DisplayName("매출 통계 조회 테스트")
-	class GetSalesStatsTest {
+            // then
+            assertThat(user.isWithdrawn()).isTrue();
+            verify(eventPublisher).publishEvent(any(UserWithdrawnEvent.class));
+        }
 
-		@Test
-		@DisplayName("Owner 매출 통계 조회 성공")
-		void getSalesStats_success() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				LocalDate targetDate = LocalDate.of(2026, 1, 6);
+        @Test
+        @DisplayName("이미 탈퇴한 사용자의 탈퇴 시도 시 예외 발생")
+        void deleteMe_AlreadyWithdrawn_ThrowsException() {
+            // given
+            user.withdraw();
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
 
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(ownerUser));
+            // when & then
+            assertThatThrownBy(() -> userService.deleteMe(userId))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_WITHDRAWN);
+        }
+    }
 
-				// when
-				List<ResSalesStatDtoV1> result = userService.getSalesStats(PeriodType.DAILY, targetDate);
+    @Nested
+    @DisplayName("getSalesStats 메서드")
+    class GetSalesStatsTest {
 
-				// then
-				assertThat(result).isNotNull();
-				assertThat(result).hasSize(1);
-				assertThat(result.get(0).getDate()).isEqualTo(targetDate);
-			}
-		}
+        @Test
+        @DisplayName("OWNER 사용자의 판매 통계 조회 성공")
+        void getSalesStats_Success() {
+            // given
+            UserEntity ownerUser = UserEntity.builder()
+                .userId(userId)
+                .email("owner@example.com")
+                .role(UserRole.OWNER)
+                .status(UserStatus.ACTIVE)
+                .build();
 
-		@Test
-		@DisplayName("Owner가 아닌 유저 매출 통계 조회 시 실패")
-		void getSalesStats_notOwner_fail() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(normalUser));
+            LocalDate targetDate = LocalDate.of(2024, 1, 15);
 
-				// when & then
-				assertThatThrownBy(() -> userService.getSalesStats(PeriodType.DAILY, LocalDate.now()))
-					.isInstanceOf(CustomException.class)
-					.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
-			}
-		}
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(ownerUser));
 
-		@Test
-		@DisplayName("날짜 없이 매출 통계 조회 시 오늘 날짜로 조회")
-		void getSalesStats_noDate_useToday() {
-			try (MockedStatic<SecurityUtil> securityUtil = mockStatic(SecurityUtil.class)) {
-				// given
-				securityUtil.when(SecurityUtil::getCurrentUserId).thenReturn(userId);
-				given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-					.willReturn(Optional.of(ownerUser));
+            // when
+            var result = userService.getSalesStats(userId, PeriodType.DAILY, targetDate);
 
-				// when
-				List<ResSalesStatDtoV1> result = userService.getSalesStats(PeriodType.DAILY, null);
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result).hasSize(1);
+        }
 
-				// then
-				assertThat(result).isNotNull();
-				assertThat(result.get(0).getDate()).isEqualTo(LocalDate.now());
-			}
-		}
-	}
+        @Test
+        @DisplayName("OWNER가 아닌 사용자의 판매 통계 조회 시 예외 발생")
+        void getSalesStats_NotOwner_ThrowsException() {
+            // given
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user)); // 일반 USER
 
-	@Nested
-	@DisplayName("유저 조회 테스트")
-	class FindUserByIdTest {
+            // when & then
+            assertThatThrownBy(() -> userService.getSalesStats(userId, PeriodType.DAILY, LocalDate.now()))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
+        }
+    }
 
-		@Test
-		@DisplayName("유저 ID로 조회 성공")
-		void findUserById_success() {
-			// given
-			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-				.willReturn(Optional.of(normalUser));
+    @Nested
+    @DisplayName("findUserById 메서드")
+    class FindUserByIdTest {
 
-			// when
-			UserEntity result = userService.findUserById(userId);
+        @Test
+        @DisplayName("사용자 조회 성공")
+        void findUserById_Success() {
+            // given
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.of(user));
 
-			// then
-			assertThat(result).isNotNull();
-			assertThat(result.getUserId()).isEqualTo(userId);
-		}
+            // when
+            UserEntity result = userService.findUserById(userId);
 
-		@Test
-		@DisplayName("존재하지 않는 유저 조회 시 실패")
-		void findUserById_notFound_fail() {
-			// given
-			given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
-				.willReturn(Optional.empty());
+            // then
+            assertThat(result).isEqualTo(user);
+        }
 
-			// when & then
-			assertThatThrownBy(() -> userService.findUserById(userId))
-				.isInstanceOf(CustomException.class)
-				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
-		}
-	}
+        @Test
+        @DisplayName("존재하지 않는 사용자 조회 시 예외 발생")
+        void findUserById_NotFound_ThrowsException() {
+            // given
+            given(userRepository.findByUserIdAndDeletedAtIsNull(userId))
+                .willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> userService.findUserById(userId))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
+        }
+    }
 }
