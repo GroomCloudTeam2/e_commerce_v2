@@ -80,7 +80,9 @@ public class UserEntity extends BaseEntity {
 	// Status Change
 	// =========================
 	public void withdraw(String deletedBy) {
-		if (this.status == UserStatus.WITHDRAWN) return; // idempotent
+		if (this.status == UserStatus.WITHDRAWN) {
+			return; // idempotent
+		}
 		this.status = UserStatus.WITHDRAWN;
 		super.softDelete(deletedBy);
 	}
