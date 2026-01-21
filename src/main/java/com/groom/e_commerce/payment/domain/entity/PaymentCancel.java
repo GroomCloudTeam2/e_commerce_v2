@@ -1,79 +1,58 @@
 package com.groom.e_commerce.payment.domain.entity;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
 @Entity
 @Table(
 	name = "p_payment_cancel",
 	indexes = {
-		@Index(name = "idx_payment_cancel_payment_key", columnList = "payment_key"),
-		@Index(name = "idx_payment_cancel_payment_id", columnList = "payment_id")
+		@Index(name = "ix_payment_cancel_payment_id", columnList = "payment_id"),
+		@Index(name = "ix_payment_cancel_payment_key", columnList = "payment_key")
 	}
 )
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PaymentCancel {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.UUID)
-	@Column(name = "cancel_id", nullable = false)
+	@Column(name = "cancel_id", columnDefinition = "uuid")
 	private UUID cancelId;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "payment_id", nullable = false)
-	private Payment payment;
-
-	@Column(name = "payment_key", nullable = false, length = 255)
-	private String paymentKey;
+	@Column(name = "payment_id", nullable = false, columnDefinition = "uuid")
+	private UUID paymentId;
 
 	@Column(name = "cancel_amount", nullable = false)
 	private Long cancelAmount;
 
 	@Column(name = "canceled_at", nullable = false)
-	private OffsetDateTime canceledAt;
+	private LocalDateTime canceledAt;
 
-	protected PaymentCancel() {
+	@Column(name = "payment_key", length = 200)
+	private String paymentKey;
+
+	@PrePersist
+	void onCreate() {
+		if (this.cancelId == null) this.cancelId = UUID.randomUUID();
+		if (this.canceledAt == null) this.canceledAt = LocalDateTime.now();
 	}
 
-	public PaymentCancel(String paymentKey, Long cancelAmount, OffsetDateTime canceledAt) {
+	private PaymentCancel(UUID paymentId, String paymentKey, Long cancelAmount, LocalDateTime canceledAt) {
+		this.cancelId = UUID.randomUUID();
+		this.paymentId = paymentId;
 		this.paymentKey = paymentKey;
 		this.cancelAmount = cancelAmount;
-		this.canceledAt = canceledAt;
+		this.canceledAt = canceledAt != null ? canceledAt : LocalDateTime.now();
 	}
 
-	public UUID getCancelId() {
-		return cancelId;
-	}
-
-	// ===== getters =====
-
-	public Payment getPayment() {
-		return payment;
-	}
-
-	void setPayment(Payment payment) {
-		this.payment = payment;
-	}
-
-	public String getPaymentKey() {
-		return paymentKey;
-	}
-
-	public Long getCancelAmount() {
-		return cancelAmount;
-	}
-
-	public OffsetDateTime getCanceledAt() {
-		return canceledAt;
+	public static PaymentCancel of(UUID paymentId, String paymentKey, Long cancelAmount, LocalDateTime canceledAt) {
+		if (paymentId == null) throw new IllegalArgumentException("paymentId is null");
+		if (cancelAmount == null || cancelAmount <= 0) throw new IllegalArgumentException("cancelAmount is invalid");
+		return new PaymentCancel(paymentId, paymentKey, cancelAmount, canceledAt);
 	}
 }
