@@ -35,13 +35,15 @@ public class ProductRatingEntity extends BaseEntity {
 	private double avgRating = 0.0;
 
 	@Column(nullable = false)
-	private Integer reviewCount = 0;
+	private int reviewCount = 0;
 
 	@Column(name = "ai_review", columnDefinition = "TEXT")
 	private String aiReview;
 
 	@Version
 	private Long version;
+
+
 
 	public ProductRatingEntity(UUID productId) {
 		this.productId = productId;
@@ -72,5 +74,10 @@ public class ProductRatingEntity extends BaseEntity {
 
 	public void updateAiReview(String aiReview) {
 		this.aiReview = aiReview;
+	}
+
+	public void reset(){
+		this.reviewCount=0;
+		this.avgRating=0;
 	}
 }

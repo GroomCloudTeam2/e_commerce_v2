@@ -2,11 +2,25 @@ spring:
   application:
     name: e_commerce
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 200
+          max-idle: 50
+          min-idle: 20
+
   datasource:
     url: jdbc:postgresql://localhost:5432/ecommerce
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 50
 
   jpa:
     hibernate:
@@ -34,6 +48,12 @@ spring:
       enabled: true
 
 
+external:
+  product-service:
+    url: http://localhost:8080
+  order-service:
+    url: http://localhost:8080
+
 jwt:
   secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
   access-token-validity: 3600000
@@ -49,9 +69,10 @@ ai:
 
 logging:
   level:
-    root: ERROR
-    com.groom.ecommerce: DEBUG
-    org.hibernate.SQL: DEBUG
+    root: INFO
+    com.groom.e_commerce: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
 
 toss:
   payments:

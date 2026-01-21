@@ -15,7 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.groom.e_commerce.review.application.service.ReviewService;
+import com.groom.e_commerce.review.application.service.ReviewQueryService;
 import com.groom.e_commerce.review.presentation.dto.response.ProductReviewResponse;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,12 +26,12 @@ class ProductReviewControllerTest {
 	private MockMvc mockMvc;
 
 	@Mock
-	private ReviewService reviewService;
+	private ReviewQueryService reviewQueryService;
 
 	@BeforeEach
 	void setUp() {
 		ProductReviewController controller =
-			new ProductReviewController(reviewService);
+			new ProductReviewController(reviewQueryService);
 
 		mockMvc = MockMvcBuilders
 			.standaloneSetup(controller)
@@ -41,24 +41,24 @@ class ProductReviewControllerTest {
 	@Test
 	void 상품_리뷰_목록_조회_기본값() throws Exception {
 		// given
-		when(reviewService.getProductReviews(
-			eq(PRODUCT_ID), eq(0), eq(10), eq("latest")
+		when(reviewQueryService.getProductReviews(
+			eq(PRODUCT_ID), eq(0), eq(10)
 		)).thenReturn(mock(ProductReviewResponse.class));
 
 		// when & then
 		mockMvc.perform(get("/api/v1/reviews/product/{productId}/", PRODUCT_ID))
 			.andExpect(status().isOk());
 
-		verify(reviewService).getProductReviews(
-			PRODUCT_ID, 0, 10, "latest"
+		verify(reviewQueryService).getProductReviews(
+			PRODUCT_ID, 0, 10
 		);
 	}
 
 	@Test
 	void 상품_리뷰_목록_조회_쿼리파라미터_지정() throws Exception {
 		// given
-		when(reviewService.getProductReviews(
-			eq(PRODUCT_ID), eq(2), eq(5), eq("like")
+		when(reviewQueryService.getProductReviews(
+			eq(PRODUCT_ID), eq(2), eq(5)
 		)).thenReturn(mock(ProductReviewResponse.class));
 
 		// when & then
@@ -66,12 +66,11 @@ class ProductReviewControllerTest {
 				get("/api/v1/reviews/product/{productId}/", PRODUCT_ID)
 					.param("page", "2")
 					.param("size", "5")
-					.param("sort", "like")
 			)
 			.andExpect(status().isOk());
 
-		verify(reviewService).getProductReviews(
-			PRODUCT_ID, 2, 5, "like"
+		verify(reviewQueryService).getProductReviews(
+			PRODUCT_ID, 2, 5
 		);
 	}
 }

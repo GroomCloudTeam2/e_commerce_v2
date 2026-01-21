@@ -83,7 +83,6 @@ public class ProductQueryRepository {
 		List<Product> content = queryFactory
 			.selectFrom(product)
 			.leftJoin(product.category, category).fetchJoin()
-			.leftJoin(product.variants, productVariant).fetchJoin()
 			.where(
 				keywordContains(keyword),
 				categoryIdEq(categoryId),
@@ -95,11 +94,10 @@ public class ProductQueryRepository {
 			.orderBy(getOrderSpecifier(sortType))
 			.offset(pageable.getOffset())
 			.limit(pageable.getPageSize())
-			.distinct()
 			.fetch();
 
 		JPAQuery<Long> countQuery = queryFactory
-			.select(product.countDistinct())
+			.select(product.count())
 			.from(product)
 			.where(
 				keywordContains(keyword),
@@ -186,6 +184,19 @@ public class ProductQueryRepository {
 			.where(product.id.in(productIds))
 			.distinct()
 			.fetch();
+	}
+
+	public long countProductsForBuyer(UUID categoryId) {
+		Long count = queryFactory
+			.select(product.count())
+			.from(product)
+			.where(
+				categoryIdEq(categoryId),
+				onSaleOnly(),
+				notDeleted()
+			)
+			.fetchOne();
+		return count != null ? count : 0L;
 	}
 
 	private BooleanExpression keywordContains(String keyword) {

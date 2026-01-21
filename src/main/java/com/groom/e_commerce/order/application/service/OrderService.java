@@ -72,7 +72,7 @@ public class OrderService {
 				item.getQuantity()
 			))
 			.toList();
-		productServiceV1.decreaseStockBulk(stockManagements);
+		productServiceV1.reserveStockBulk(stockManagements);
 
 		// 2. 주문번호 생성
 		String orderNumber = generateOrderNumber();
@@ -195,7 +195,7 @@ public class OrderService {
 			.toList();
 
 		// 한 번만 호출
-		productServiceV1.increaseStockBulk(stockManagements);
+		productServiceV1.restoreStockBulk(stockManagements);
 
 
 		// 4. (선택) 결제 취소 로직

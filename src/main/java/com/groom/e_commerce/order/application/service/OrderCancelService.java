@@ -57,7 +57,7 @@ public class OrderCancelService {
 			.map(OrderItem::toStockManagement) // OrderItem 내부의 변환 메서드 호출
 			.toList();
 
-		productServiceV1.increaseStockBulk(stockManagements);
+		productServiceV1.restoreStockBulk(stockManagements);
 
 		// (선택) 주문 전체 취소 동기화 로직은 여기에 추가
 
