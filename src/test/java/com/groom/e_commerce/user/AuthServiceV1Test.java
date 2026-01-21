@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.groom.e_commerce.global.infrastructure.config.security.JwtUtil;
 import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
+import com.groom.e_commerce.user.application.service.AuthServiceV1;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerEntity;
 import com.groom.e_commerce.user.domain.entity.user.UserEntity;
 import com.groom.e_commerce.user.domain.entity.user.UserRole;

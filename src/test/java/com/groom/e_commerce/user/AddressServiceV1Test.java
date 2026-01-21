@@ -21,6 +21,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
+import com.groom.e_commerce.user.application.service.AddressServiceV1;
+import com.groom.e_commerce.user.application.service.UserServiceV1;
 import com.groom.e_commerce.user.domain.entity.address.AddressEntity;
 import com.groom.e_commerce.user.domain.entity.user.UserEntity;
 import com.groom.e_commerce.user.domain.entity.user.UserRole;
