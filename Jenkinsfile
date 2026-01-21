@@ -20,6 +20,14 @@ pipeline {
     }
 
     stages {
+        stage('Check Java Version') {
+            steps {
+                sh '''
+                  java -version
+                  ./gradlew -version
+                '''
+            }
+        }
 
         stage('Checkout') {
             steps {
