@@ -11,7 +11,7 @@ pipeline {
 
         // ===== SonarCloud =====
         SONAR_PROJECT_KEY = "GroomCloudTeam2_e_commerce_v2"
-        SONAR_ORG = "GroomCloudTeam2"
+        SONAR_ORG = "groomcloudteam2"
         SONAR_HOST_URL = "https://sonarcloud.io"
     }
 
