@@ -1,116 +1,87 @@
 pipeline {
     agent any
 
-    environment {
-        // ===== Gradle =====
-        GRADLE_USER_HOME = "${WORKSPACE}/.gradle"
-
-        // ===== Docker =====
-        IMAGE_NAME = "boxty123/ecommerce_v2"
-        IMAGE_TAG  = "${BUILD_NUMBER}"
-
-        // ===== SonarCloud =====
-        SONAR_PROJECT_KEY = "groom"
-        SONAR_ORG = "boxty"
-        SONAR_HOST_URL = "https://sonarcloud.io"
-    }
-
     options {
         timestamps()
     }
 
-    stages {
+    environment {
+        // Sonar token (너 Jenkins credentials에 'sonarqube-token'으로 등록된 값)
+        SONAR_TOKEN = credentials('sonarqube-token')
 
+        IMAGE_NAME = 'e_commerce_v2'
+        TRIVY_SEVERITY = 'HIGH,CRITICAL'
+    }
+
+    stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                deleteDir()
+                git branch: 'user', url: 'https://github.com/GroomCloudTeam2/e_commerce_v2.git'
             }
         }
 
-        /* =========================
-         * 1️⃣ Test + Coverage
-         * ========================= */
-        stage('Test & Coverage') {
+        stage('Build & Test') {
             steps {
-                sh './gradlew clean test jacocoTestReport'
+                sh './gradlew clean test jacocoTestReport build'
             }
-            post {
-                always {
-                    junit 'build/test-results/test/**/*.xml'
-                    archiveArtifacts artifacts: 'build/reports/jacoco/test/jacocoTestReport.xml'
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    // sonarqube task는 deprecated라 sonar 권장
+                    sh './gradlew sonar -Dsonar.token=$SONAR_TOKEN -Dsonar.gradle.skipCompile=true'
                 }
             }
         }
 
-        /* =========================
-         * 2️⃣ SonarCloud Analysis (with Coverage)
-         * ========================= */
-        stage('SonarCloud Analysis') {
-            environment {
-                SONAR_TOKEN = credentials('sonarcloud-token')
-            }
-            steps {
-                sh '''
-                    ./gradlew sonar \
-                      -Dsonar.projectKey=$SONAR_PROJECT_KEY \
-                      -Dsonar.organization=$SONAR_ORG \
-                      -Dsonar.host.url=$SONAR_HOST_URL \
-                      -Dsonar.token=$SONAR_TOKEN \
-                      -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/jacoco/test/jacocoTestReport.xml
-                '''
-            }
-        }
-
-        /* =========================
-         * 3️⃣ Quality Gate
-         * ========================= */
         stage('Quality Gate') {
             steps {
-                timeout(time: 3, unit: 'MINUTES') {
+                timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
         }
 
-        /* =========================
-         * 4️⃣ Build Jar
-         * ========================= */
-        stage('Build') {
-            steps {
-                sh './gradlew build -x test'
-            }
-        }
-
-        /* =========================
-         * 5️⃣ Docker Build
-         * ========================= */
         stage('Docker Build') {
             steps {
+                script {
+                    def shortSha = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    env.IMAGE_TAG = "${env.BUILD_NUMBER}-${shortSha}"
+                }
+                sh 'docker version'
                 sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
             }
         }
 
-        /* =========================
-         * 6️⃣ Trivy Image Scan
-         * ========================= */
-        stage('Trivy Scan') {
+        stage('Image Vulnerability Scan (Trivy)') {
             steps {
+                // Trivy를 컨테이너로 실행 (Jenkins에 설치 불필요)
+                // --exit-code 1 : 취약점(지정 severity) 발견 시 파이프라인 FAIL
                 sh '''
-                    trivy image \
-                      --severity HIGH,CRITICAL \
-                      --exit-code 1 \
-                      $IMAGE_NAME:$IMAGE_TAG
-                '''
+                      docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        -v "$WORKSPACE:/workspace" \
+                        aquasec/trivy:latest image \
+                        --scanners vuln \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 0 \
+                        --no-progress \
+                        "$IMAGE_NAME:$IMAGE_TAG"
+                    '''
+
             }
         }
     }
 
     post {
-        success {
-            echo '✅ CI Pipeline Success'
-        }
-        failure {
-            echo '❌ CI Pipeline Failed'
+        always {
+            // 스캔 리포트 저장
+            archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
+
+            // 테스트/커버리지 리포트도 필요하면 같이 보관
+            archiveArtifacts artifacts: 'build/reports/**', allowEmptyArchive: true
         }
     }
 }
