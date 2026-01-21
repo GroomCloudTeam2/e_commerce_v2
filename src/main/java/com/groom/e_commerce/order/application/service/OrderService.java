@@ -132,18 +132,18 @@ public class OrderService {
 		}
 
 		// 6. OrderItem 일괄 저장
-		orderItemRepository.saveAll(orderItems);
+		//orderItemRepository.saveAll(orderItems);
 
-		order.updatePaymentAmount(totalAmount);
-		System.out.println("최종 결제 금액: " + totalAmount);
-		Payment payment = Payment.builder()
-			.orderId(order.getOrderId())
-			.amount(totalAmount)
-			.status(PaymentStatus.READY)
-			.pgProvider("TOSS")
-			.build();
+		//order.updatePaymentAmount(totalAmount);
+		//System.out.println("최종 결제 금액: " + totalAmount);
+		//Payment payment = Payment.builder()
+		//	.orderId(order.getOrderId())
+		//	.amount(totalAmount)
+		//	.status(PaymentStatus.READY)
+		//	.pgProvider("TOSS")
+		//	.build();
 
-		paymentRepository.save(payment);
+		//paymentRepository.save(payment);
 
 		if (request.getFromCartItemsIds() != null && !request.getFromCartItemsIds().isEmpty()) {
 			cartService.removeCartItems(buyerId, request.getFromCartItemsIds());
