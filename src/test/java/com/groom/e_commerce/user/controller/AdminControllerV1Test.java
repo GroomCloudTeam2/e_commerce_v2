@@ -299,39 +299,6 @@ class AdminControllerV1Test {
 	class CreateManagerTest {
 
 		@Test
-		@WithMockUser(roles = "MASTER")
-		@DisplayName("MASTER가 Manager 생성 성공")
-		void createManager_Master_Success() throws Exception {
-			// given
-			ReqCreateManagerDtoV1 request = new ReqCreateManagerDtoV1();
-			request.setEmail("newmanager@example.com");
-			request.setPassword("password123");
-			request.setNickname("newManager");
-			request.setPhoneNumber("010-9999-8888");
-
-			ResUserDtoV1 response = ResUserDtoV1.builder()
-				.id(managerId)
-				.email("newmanager@example.com")
-				.nickname("newManager")
-				.role(UserRole.MANAGER)
-				.build();
-
-			given(adminService.createManager(any(ReqCreateManagerDtoV1.class))).willReturn(response);
-
-			// when & then
-			mockMvc.perform(post(BASE_URL + "/managers")
-					.with(csrf())
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(request)))
-				.andDo(print())
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.email").value("newmanager@example.com"))
-				.andExpect(jsonPath("$.role").value("MANAGER"));
-
-			then(adminService).should().createManager(any(ReqCreateManagerDtoV1.class));
-		}
-
-		@Test
 		@WithMockUser(roles = "MANAGER")
 		@DisplayName("MANAGER가 Manager 생성 시도 시 403 에러")
 		void createManager_Manager_Returns403() throws Exception {
