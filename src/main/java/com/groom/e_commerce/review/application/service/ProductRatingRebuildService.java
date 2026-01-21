@@ -32,7 +32,7 @@ public class ProductRatingRebuildService {
             productRatingRepository.findByProductId(productId)
                 .orElseGet(() -> new ProductRatingEntity(productId));
 
-        rating.reset(); // count=0, total=0
+        rating.reset();
 
         for (ReviewEntity review : reviews) {
             rating.updateRating(review.getRating());

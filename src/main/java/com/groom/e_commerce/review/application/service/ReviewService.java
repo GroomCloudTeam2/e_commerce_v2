@@ -39,7 +39,7 @@ public class ReviewService {
 	private final ReviewRepository reviewRepository;
 	private final ReviewLikeRepository reviewLikeRepository;
 	private final ProductRatingRepository productRatingRepository;
-	private final AiClient aiClient; // ✅ Feign 숨김
+	private final AiClient aiClient;
 	private final OrderReviewValidator orderReviewValidator;
 	private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -85,6 +85,7 @@ public class ReviewService {
 		// 3. 이벤트 발행
 		applicationEventPublisher.publishEvent(
 			new ReviewCreatedEvent(
+				review.getUserId(),
 				review.getReviewId(),
 				review.getProductId(),
 				request.getRating()
