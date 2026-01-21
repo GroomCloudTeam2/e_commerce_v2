@@ -1,4 +1,4 @@
-package com.groom.e_commerce.user;
+package com.groom.e_commerce.user.service;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;

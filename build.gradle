@@ -24,6 +24,13 @@ jacoco {
 }
 
 jacocoTestReport {
+    classDirectories.setFrom(files(classDirectories.files.collect { dir ->
+        fileTree(dir: dir, exclude: [
+                "**/Q*",
+                '**/*$*',
+                "**/generated/**"
+        ])
+    }))
     reports {
         xml.required = true  // SonarQube용
         html.required = true
