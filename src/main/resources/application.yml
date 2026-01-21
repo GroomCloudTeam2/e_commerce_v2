@@ -38,6 +38,15 @@ spring:
       name: user
       password: 1234
 
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
+  feign:
+    circuitbreaker:
+      enabled: true
+
 
 external:
   product-service:
@@ -75,3 +84,28 @@ toss:
     connect-timeout-ms: 3000
     read-timeout-ms: 5000
 
+# Resilienve4j 정책 설정 - 수정 필요
+resilience4j:
+  circuitbreaker:
+    instances:
+      tossPaymentsClient:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 20
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        minimumNumberOfCalls: 10
+        permittedNumberOfCallsInHalfOpenState: 5
+
+  retry:
+    instances:
+      tossPaymentsClient:
+        maxAttempts: 3
+        waitDuration: 200ms
+        retryExceptions:
+          - java.io.IOException
+          - feign.RetryableException
+
+  timelimiter:
+    instances:
+      tossPaymentsClient:
+        timeoutDuration: 2s
