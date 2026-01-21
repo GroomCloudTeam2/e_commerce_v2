@@ -35,6 +35,9 @@ import com.groom.e_commerce.product.presentation.dto.request.ReqProductUpdateDto
 import com.groom.e_commerce.product.presentation.dto.response.ResProductCreateDtoV1;
 import com.groom.e_commerce.product.presentation.dto.response.ResProductDetailDtoV1;
 import com.groom.e_commerce.product.presentation.dto.response.ResProductDtoV1;
+import com.groom.e_commerce.product.infrastructure.cache.ProductDetailCacheService;
+import com.groom.e_commerce.product.infrastructure.cache.ProductListCacheService;
+import com.groom.e_commerce.product.infrastructure.cache.StockRedisService;
 import com.groom.e_commerce.product.presentation.dto.response.ResProductListDtoV1;
 import com.groom.e_commerce.product.presentation.dto.response.ResProductSearchDtoV1;
 
@@ -49,6 +52,9 @@ public class ProductServiceV1 {
 	private final ProductVariantRepository productVariantRepository;
 	private final ProductQueryRepository productQueryRepository;
 	private final CategoryServiceV1 categoryService;
+	private final ProductListCacheService listCacheService;
+	private final ProductDetailCacheService detailCacheService;
+	private final StockRedisService stockRedisService;
 
 	/**
 	 * 상품 등록 (Owner)
@@ -108,7 +114,7 @@ public class ProductServiceV1 {
 
 		// Variants 처리
 		if (request.getVariants() != null && !request.getVariants().isEmpty()) {
-			// 저장된 옵션값 ID 목록 수집
+			// ... (기존 Variants 처리 로직 유지)
 			List<List<UUID>> savedOptionValueIdsList = new ArrayList<>();
 			for (ProductOption option : savedProduct.getOptions()) {
 				List<UUID> valueIds = new ArrayList<>();
@@ -119,13 +125,10 @@ public class ProductServiceV1 {
 			}
 
 			for (ReqProductCreateDtoV1.VariantRequest variantReq : request.getVariants()) {
-				// SKU 코드 중복 검사
-				if (variantReq.getSkuCode() != null && productVariantRepository.existsBySkuCode(
-					variantReq.getSkuCode())) {
+				if (variantReq.getSkuCode() != null && productVariantRepository.existsBySkuCode(variantReq.getSkuCode())) {
 					throw new CustomException(ErrorCode.DUPLICATE_SKU_CODE);
 				}
 
-				// optionValueIndexes를 실제 ID로 변환
 				List<UUID> optionValueIds = new ArrayList<>();
 				String optionName = buildOptionName(variantReq.getOptionValueIndexes(), savedOptionValueIdsList,
 					savedProduct.getOptions(), optionValueIds);
@@ -141,6 +144,19 @@ public class ProductServiceV1 {
 				savedProduct.addVariant(variant);
 			}
 		}
+
+		// [추가] Redis 재고 동기화 (Warm-up)
+		if (Boolean.TRUE.equals(savedProduct.getHasOptions())) {
+			savedProduct.getVariants().forEach(variant ->
+				stockRedisService.syncStock(savedProduct.getId(), variant.getId(), variant.getStockQuantity())
+			);
+		} else {
+			stockRedisService.syncStock(savedProduct.getId(), null, savedProduct.getStockQuantity());
+		}
+
+		// 캐시에 추가
+		listCacheService.addProduct(savedProduct);
+		detailCacheService.put(savedProduct);
 
 		return ResProductCreateDtoV1.from(savedProduct);
 	}
@@ -198,6 +214,8 @@ public class ProductServiceV1 {
 		Product product = findProductById(productId);
 		validateProductOwnership(product, ownerId);
 
+		UUID oldCategoryId = product.getCategory().getId();
+
 		Category category = null;
 		if (request.getCategoryId() != null) {
 			category = categoryService.findActiveCategoryById(request.getCategoryId());
@@ -213,6 +231,13 @@ public class ProductServiceV1 {
 			request.getStatus()
 		);
 
+		// 캐시 업데이트
+		detailCacheService.put(product);
+		if (category != null && !category.getId().equals(oldCategoryId)) {
+			// 카테고리 변경 시 목록 캐시 이동
+			listCacheService.moveProduct(product, oldCategoryId);
+		}
+
 		return ResProductDtoV1.from(product);
 	}
 
@@ -226,7 +251,12 @@ public class ProductServiceV1 {
 		Product product = findProductById(productId);
 		validateProductOwnership(product, ownerId);
 
+		UUID categoryId = product.getCategory().getId();
 		product.softDelete(ownerId);
+
+		// 캐시에서 제거
+		listCacheService.removeProduct(productId, categoryId);
+		detailCacheService.delete(productId);
 	}
 
 	/**
@@ -238,7 +268,8 @@ public class ProductServiceV1 {
 	}
 
 	/**
-	 * 상품 목록 조회 (구매자용 - 공개 API)
+	 * 상품 목록 조회 (구매자용 - 검색/필터링)
+	 * 참고: 단순 목록 조회는 ProductReadService 사용 권장
 	 */
 	public Page<ResProductSearchDtoV1> searchProducts(
 		UUID categoryId,
@@ -299,6 +330,11 @@ public class ProductServiceV1 {
 	public ResProductDtoV1 suspendProduct(UUID productId, ReqProductSuspendDtoV1 request) {
 		Product product = findProductById(productId);
 		product.suspend(request.getReason());
+
+		// 캐시에서 제거 (정지된 상품은 목록에서 미노출)
+		listCacheService.removeProduct(productId, product.getCategory().getId());
+		detailCacheService.delete(productId);
+
 		return ResProductDtoV1.from(product);
 	}
 
@@ -309,6 +345,11 @@ public class ProductServiceV1 {
 	public ResProductDtoV1 restoreProduct(UUID productId) {
 		Product product = findProductById(productId);
 		product.restore();
+
+		// 캐시에 다시 추가
+		listCacheService.addProduct(product);
+		detailCacheService.put(product);
+
 		return ResProductDtoV1.from(product);
 	}
 
@@ -379,20 +420,23 @@ public class ProductServiceV1 {
 	// ==================== 재고 관리 (Order 도메인 연동) ====================
 
 	/**
-	 * 단일 상품 재고 차감
+	 * 단일 상품 재고 차감 (내부용 - 결제 확정 시 호출)
 	 */
 	@Transactional
-	public void decreaseStock(UUID productId, UUID variantId, int quantity) {
+	protected void decreaseStock(UUID productId, UUID variantId, int quantity) {
 		if (variantId != null) {
 			// 옵션 상품 차감
-			ProductVariant variant = productVariantRepository.findByIdAndProductIdWithLock(variantId, productId)
+			ProductVariant variant = productVariantRepository.findById(variantId)
 				.orElseThrow(() -> new CustomException(ErrorCode.VARIANT_NOT_FOUND));
+
+			if (!variant.getProduct().getId().equals(productId)) {
+				throw new CustomException(ErrorCode.VARIANT_NOT_FOUND);
+			}
 
 			variant.decreaseStock(quantity);
 		} else {
 			// 단일 상품 차감
-			Product product = productRepository.findByIdWithLock(productId)
-				.orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+			Product product = findProductById(productId);
 
 			if (Boolean.TRUE.equals(product.getHasOptions())) {
 				throw new CustomException(ErrorCode.VARIANT_REQUIRED);
@@ -403,28 +447,21 @@ public class ProductServiceV1 {
 	}
 
 	/**
-	 * Bulk 재고 차감 (여러 상품 동시 처리)
+	 * 재고 복원 (내부용 - 주문 취소/환불 확정 시 호출)
 	 */
 	@Transactional
-	public void decreaseStockBulk(List<StockManagement> items) {
-		for (StockManagement item : items) {
-			decreaseStock(item.getProductId(), item.getVariantId(), item.getQuantity());
-		}
-	}
-
-	/**
-	 * 재고 복원 (주문 취소용)
-	 */
-	@Transactional
-	public void increaseStock(UUID productId, UUID variantId, int quantity) {
+	protected void increaseStock(UUID productId, UUID variantId, int quantity) {
 		if (variantId != null) {
-			ProductVariant variant = productVariantRepository.findByIdAndProductIdWithLock(variantId, productId)
+			ProductVariant variant = productVariantRepository.findById(variantId)
 				.orElseThrow(() -> new CustomException(ErrorCode.VARIANT_NOT_FOUND));
+
+			if (!variant.getProduct().getId().equals(productId)) {
+				throw new CustomException(ErrorCode.VARIANT_NOT_FOUND);
+			}
 
 			variant.increaseStock(quantity);
 		} else {
-			Product product = productRepository.findByIdWithLock(productId)
-				.orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+			Product product = findProductById(productId);
 
 			if (Boolean.TRUE.equals(product.getHasOptions())) {
 				throw new CustomException(ErrorCode.VARIANT_REQUIRED);
@@ -434,18 +471,93 @@ public class ProductServiceV1 {
 		}
 	}
 
-	/**
-	 * Bulk 재고 복원
-	 */
-	@Transactional
-	public void increaseStockBulk(List<StockManagement> items) {
-		for (StockManagement item : items) {
-			increaseStock(item.getProductId(), item.getVariantId(), item.getQuantity());
-		}
-	}
-
 	public ProductVariant findVariantById(UUID variantId) {
 		return productVariantRepository.findById(variantId)
 			.orElseThrow(() -> new CustomException(ErrorCode.VARIANT_NOT_FOUND));
+	}
+
+	// ==================== Redis 재고 관리 (가점유 시스템) ====================
+
+	/**
+	 * 재고 가점유 (Redis Lua Script - 주문서 작성 시)
+	 * 원자적으로 재고 검증 + 차감
+	 */
+	public void reserveStock(UUID productId, UUID variantId, int quantity) {
+		stockRedisService.reserve(productId, variantId, quantity);
+	}
+
+	/**
+	 * Bulk 재고 가점유
+	 */
+	public void reserveStockBulk(List<StockManagement> items) {
+		for (StockManagement item : items) {
+			reserveStock(item.getProductId(), item.getVariantId(), item.getQuantity());
+		}
+	}
+
+	/**
+	 * 재고 가점유 해제 (Redis INCR - 주문 취소/타임아웃 시)
+	 */
+	public void releaseStock(UUID productId, UUID variantId, int quantity) {
+		stockRedisService.release(productId, variantId, quantity);
+	}
+
+	/**
+	 * Bulk 재고 가점유 해제
+	 */
+	public void releaseStockBulk(List<StockManagement> items) {
+		for (StockManagement item : items) {
+			releaseStock(item.getProductId(), item.getVariantId(), item.getQuantity());
+		}
+	}
+
+	/**
+	 * 재고 확정 차감 (결제 완료 시)
+	 * DB 실재고 차감 + 상태 자동 변경 (ON_SALE/SOLD_OUT)
+	 */
+	@Transactional
+	public void confirmStock(UUID productId, UUID variantId, int quantity) {
+		// DB 실재고 차감 (엔티티 메서드 호출 → 상태 자동 변경)
+		decreaseStock(productId, variantId, quantity);
+	}
+
+	/**
+	 * Bulk 재고 확정 차감
+	 */
+	@Transactional
+	public void confirmStockBulk(List<StockManagement> items) {
+		for (StockManagement item : items) {
+			confirmStock(item.getProductId(), item.getVariantId(), item.getQuantity());
+		}
+	}
+
+	/**
+	 * 재고 복구 (환불/취소 확정 시)
+	 * Redis 재고 복구 + DB 재고 복구 + 상태 자동 변경
+	 */
+	@Transactional
+	public void restoreStock(UUID productId, UUID variantId, int quantity) {
+		// 1. Redis 가용 재고 복구
+		stockRedisService.release(productId, variantId, quantity);
+
+		// 2. DB 실재고 복구 (엔티티 메서드 호출 → 상태 자동 변경)
+		increaseStock(productId, variantId, quantity);
+	}
+
+	/**
+	 * Bulk 재고 복구
+	 */
+	@Transactional
+	public void restoreStockBulk(List<StockManagement> items) {
+		for (StockManagement item : items) {
+			restoreStock(item.getProductId(), item.getVariantId(), item.getQuantity());
+		}
+	}
+
+	/**
+	 * 가용 재고 조회 (Redis)
+	 */
+	public Integer getAvailableStock(UUID productId, UUID variantId) {
+		return stockRedisService.getAvailableStock(productId, variantId);
 	}
 }
