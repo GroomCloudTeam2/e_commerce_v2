@@ -7,10 +7,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.groom.e_commerce.product.application.dto.StockManagement;
+import com.groom.e_commerce.order.domain.event.outbound.OrderCancelledEvent;
 import com.groom.e_commerce.payment.event.model.PaymentCompletedEvent;
 import com.groom.e_commerce.payment.event.model.PaymentFailEvent;
-import com.groom.e_commerce.product.application.dto.StockManagement;
-import com.groom.e_commerce.product.application.event.dto.OrderCancelledEvent;
 import com.groom.e_commerce.product.application.event.dto.StockDeductedEvent;
 import com.groom.e_commerce.product.application.event.dto.StockDeductionFailedEvent;
 import com.groom.e_commerce.product.application.event.publisher.ProductEventPublisher;
@@ -150,13 +150,13 @@ public class ProductEventListener {
 	@Transactional
 	public void handleOrderCancelled(OrderCancelledEvent event) {
 		log.info("[Product] OrderCancelledEvent 수신 - orderId: {}, reason: {}",
-			event.getOrderId(), event.getCancelReason());
+			event.orderId(), event.reason());
 
 		// Redis에서 주문-상품 매핑 조회
-		List<StockManagement> stockManagements = stockRedisService.getOrderStockItems(event.getOrderId());
+		List<StockManagement> stockManagements = stockRedisService.getOrderStockItems(event.orderId());
 
 		if (stockManagements.isEmpty()) {
-			log.warn("[Product] 주문-상품 매핑을 찾을 수 없음 (이미 처리됨?) - orderId: {}", event.getOrderId());
+			log.warn("[Product] 주문-상품 매핑을 찾을 수 없음 (이미 처리됨?) - orderId: {}", event.orderId());
 			return;
 		}
 
@@ -165,12 +165,12 @@ public class ProductEventListener {
 			productServiceV1.restoreStockBulk(stockManagements);
 
 			// 매핑 삭제
-			stockRedisService.deleteOrderStockItems(event.getOrderId());
+			stockRedisService.deleteOrderStockItems(event.orderId());
 
-			log.info("[Product] 재고 복구 완료 - orderId: {}", event.getOrderId());
+			log.info("[Product] 재고 복구 완료 - orderId: {}", event.orderId());
 
 		} catch (Exception e) {
-			log.error("[Product] 재고 복구 실패 - orderId: {}, error: {}", event.getOrderId(), e.getMessage());
+			log.error("[Product] 재고 복구 실패 - orderId: {}, error: {}", event.orderId(), e.getMessage());
 		}
 	}
 }
