@@ -1,13 +1,22 @@
 package com.groom.e_commerce.order.domain.entity;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import com.groom.e_commerce.global.domain.entity.BaseEntity;
 import com.groom.e_commerce.order.domain.status.OrderStatus;
 
-import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -67,15 +76,14 @@ public class Order extends BaseEntity {
 
 	@Builder
 	public Order(
-		UUID buyerId,
-		String orderNumber,
-		Long totalPaymentAmount,
-		String recipientName,
-		String recipientPhone,
-		String zipCode,
-		String shippingAddress,
-		String shippingMemo
-	) {
+			UUID buyerId,
+			String orderNumber,
+			Long totalPaymentAmount,
+			String recipientName,
+			String recipientPhone,
+			String zipCode,
+			String shippingAddress,
+			String shippingMemo) {
 		this.orderId = UUID.randomUUID();
 		this.buyerId = buyerId;
 		this.orderNumber = orderNumber;
@@ -88,61 +96,59 @@ public class Order extends BaseEntity {
 		this.status = OrderStatus.PENDING;
 	}
 
-	/* ================= 상태 전이 ================= */
-	/* 전부 "이벤트 수신 결과"로만 호출된다고 가정 */
-
-	/** 결제 성공 이벤트 수신 */
-	public void markPaid() {
-		validateStatus(OrderStatus.PENDING, "결제 완료 처리는 PENDING 상태에서만 가능합니다.");
+	/**
+	 * 1. 결제 성공 (PENDING -> PAID)
+	 */
+	public void confirmPayment() {
+		if (this.status != OrderStatus.PENDING) {
+			throw new IllegalStateException("결제 확인은 PENDING 상태에서만 가능합니다. 현재: " + this.status);
+		}
 		this.status = OrderStatus.PAID;
 	}
 
-	/** 결제 실패 이벤트 수신 */
-	public void markPaymentFailed() {
-		validateStatus(OrderStatus.PENDING, "결제 실패 처리는 PENDING 상태에서만 가능합니다.");
-		this.status = OrderStatus.FAILED;
-	}
-
-	/** 재고 차감 성공 이벤트 수신 */
-	public void confirmStock() {
-		validateStatus(OrderStatus.PAID, "재고 확정은 PAID 상태에서만 가능합니다.");
+	/**
+	 * 3. 최종 확정 (PAID -> CONFIRMED)
+	 */
+	public void complete() {
+		if (this.status != OrderStatus.PAID) {
+			throw new IllegalStateException("주문 확정은 결제 완료(PAID) 이후에만 가능합니다. 현재: " + this.status);
+		}
 		this.status = OrderStatus.CONFIRMED;
 	}
 
-	/** 환불 성공 이벤트 수신 */
-	public void markCancelled() {
-		if (this.status != OrderStatus.PAID && this.status != OrderStatus.CONFIRMED) {
-			throw new IllegalStateException("환불 처리는 PAID 또는 CONFIRMED 상태에서만 가능합니다.");
+	/**
+	 * 4. 실패 처리 (결제 실패, 재고 실패 등)
+	 */
+	public void fail() {
+		if (this.status == OrderStatus.CONFIRMED || this.status == OrderStatus.CANCELLED) {
+			throw new IllegalStateException("이미 완료되거나 취소된 주문은 실패 처리할 수 없습니다.");
+		}
+		this.status = OrderStatus.FAILED;
+	}
+
+	/**
+	 * 5. 취소 처리
+	 */
+	public void cancel() {
+		if (this.status == OrderStatus.CONFIRMED) {
+			throw new IllegalStateException("이미 완료된 주문은 취소할 수 없습니다.");
 		}
 		this.status = OrderStatus.CANCELLED;
 	}
 
-	/** 환불 실패 이벤트 수신 */
-	public void markManualCheck() {
-		this.status = OrderStatus.MANUAL_CHECK;
+	public void addItem(OrderItem item) {
+		this.items.add(item);
+		// item.setOrder(this); // If OrderItem has setOrder, but it seems it's set in
+		// constructor or builder
 	}
 
-	/* ================= 조회용 헬퍼 ================= */
-
-	public boolean isPayable() {
-		return this.status == OrderStatus.PENDING;
-	}
-
-	public boolean isStockConfirmable() {
-		return this.status == OrderStatus.PAID;
-	}
-
-	public boolean isRefundable() {
-		return this.status == OrderStatus.PAID || this.status == OrderStatus.CONFIRMED;
-	}
-
-	/* ================= 내부 유틸 ================= */
-
-	private void validateStatus(OrderStatus expected, String message) {
-		if (this.status != expected) {
-			throw new IllegalStateException(
-				String.format("%s (현재 상태: %s)", message, this.status)
-			);
+	/**
+	 * 6. 수동 확인 필요 (환불 실패 등)
+	 */
+	public void requireManualCheck() {
+		if (this.status == OrderStatus.CONFIRMED || this.status == OrderStatus.CANCELLED) {
+			throw new IllegalStateException("이미 완료되거나 취소된 주문은 수동 확인 상태로 변경할 수 없습니다.");
 		}
+		this.status = OrderStatus.MANUAL_CHECK;
 	}
 }
