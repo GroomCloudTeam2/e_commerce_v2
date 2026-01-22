@@ -22,7 +22,7 @@ public class FeignConfig {
 
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-	@Beanㄴ
+	@Bean
 	public Request.Options feignRequestOptions(TossPaymentsProperties props) {
 		int connectTimeout = props.connectTimeoutMs() != null ? props.connectTimeoutMs() : 3000;
 		int readTimeout = props.readTimeoutMs() != null ? props.readTimeoutMs() : 5000;
