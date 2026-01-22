@@ -9,7 +9,7 @@ import com.groom.e_commerce.payment.infrastructure.config.InternalFeignConfig;
 
 @FeignClient(
 	name = "orderClient",
-	url = "${internal.order.base-url}",
+	path = "/internal/order",
 	configuration = InternalFeignConfig.class
 )
 public interface OrderClient {
