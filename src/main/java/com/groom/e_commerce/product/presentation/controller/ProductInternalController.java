@@ -87,6 +87,37 @@ public class ProductInternalController {
 	}
 
 	/**
+	 * 단일 아이템 재고 가점유 (Reserve)
+	 * - 호출 시점: 주문서 생성 시 개별 아이템 (Order 서비스)
+	 * - 동작: Redis에서 원자적으로 재고 검증 + 차감 + 주문-상품 매핑 저장
+	 */
+	@Operation(summary = "단일 아이템 재고 가점유", description = "개별 상품의 재고를 가점유합니다.")
+	@PostMapping("/stock/reserve-single")
+	public ResponseEntity<ResStockOperationDto> reserveStockSingle(
+		@RequestBody Map<String, Object> request
+	) {
+		UUID orderId = UUID.fromString((String) request.get("orderId"));
+		UUID productId = UUID.fromString((String) request.get("productId"));
+		UUID variantId = request.get("variantId") != null ? UUID.fromString((String) request.get("variantId")) : null;
+		int quantity = ((Number) request.get("quantity")).intValue();
+
+		log.info("[Internal API] 단일 재고 가점유 요청 - orderId: {}, productId: {}, variantId: {}, quantity: {}", orderId, productId, variantId, quantity);
+
+		StockManagement stockManagement = StockManagement.of(productId, variantId, quantity);
+
+		// 1. 재고 가점유
+		productService.reserveStockBulk(List.of(stockManagement));
+
+		// 2. 주문-상품 매핑 저장 (기존 매핑이 있으면 추가)
+		List<StockManagement> existingItems = new java.util.ArrayList<>(stockRedisService.getOrderStockItems(orderId));
+		existingItems.add(stockManagement);
+		stockRedisService.saveOrderStockItems(orderId, existingItems);
+
+		log.info("[Internal API] 단일 재고 가점유 완료 - orderId: {}, productId: {}", orderId, productId);
+		return ResponseEntity.ok(ResStockOperationDto.success("재고 가점유가 완료되었습니다."));
+	}
+
+	/**
 	 * 가용 재고 조회
 	 * - 호출 시점: 재고 확인이 필요할 때
 	 * - 동작: Redis에서 현재 가용 재고 조회
@@ -119,33 +150,17 @@ public class ProductInternalController {
 	 * 상품 정보 벌크 조회
 	 * - 호출 시점: 주문 생성, 장바구니 조회 시 (Order/Cart 서비스)
 	 * - 동작: N+1 방지를 위한 벌크 조회
-	 *
-	 * Request Body:
-	 * {
-	 *   "items": [{ "productId": "UUID", "variantId": "UUID (optional)", "quantity": int }]
-	 * }
 	 */
 	@Operation(summary = "상품 정보 벌크 조회", description = "여러 상품 정보를 한 번에 조회합니다. (N+1 방지)")
 	@PostMapping("/bulk-info")
-	@SuppressWarnings("unchecked")
-	public ResponseEntity<ResProductBulkInfoDto> getProductBulkInfo(
-		@RequestBody Map<String, Object> request
+	public ResponseEntity<List<ProductCartInfo>> getProductBulkInfo(
+		@RequestBody List<StockManagement> items
 	) {
-		List<Map<String, Object>> items = (List<Map<String, Object>>) request.get("items");
-
 		log.info("[Internal API] 상품 정보 벌크 조회 요청 - items: {}", items.size());
 
-		List<StockManagement> stockManagements = items.stream()
-			.map(item -> StockManagement.of(
-				UUID.fromString((String) item.get("productId")),
-				item.get("variantId") != null ? UUID.fromString((String) item.get("variantId")) : null,
-				item.get("quantity") != null ? ((Number) item.get("quantity")).intValue() : 0
-			))
-			.toList();
-
-		List<ProductCartInfo> productInfos = productService.getProductCartInfos(stockManagements);
+		List<ProductCartInfo> productInfos = productService.getProductCartInfos(items);
 
 		log.info("[Internal API] 상품 정보 벌크 조회 완료 - results: {}", productInfos.size());
-		return ResponseEntity.ok(ResProductBulkInfoDto.from(productInfos));
+		return ResponseEntity.ok(productInfos);
 	}
 }

@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import com.groom.e_commerce.order.infrastructure.client.dto.StockReserveRequest;
 
-@FeignClient(name = "product-service", path = "/api/v1/internal/products")
+@FeignClient(name = "product-service", url = "${external.product-service.url}", path = "/api/v1/internal/products")
 public interface ProductClient {
 
 	/**

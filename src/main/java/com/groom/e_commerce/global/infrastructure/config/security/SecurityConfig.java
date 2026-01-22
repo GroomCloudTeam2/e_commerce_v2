@@ -46,6 +46,10 @@ public class SecurityConfig {
 				// 상품 공개 API (구매자용)
 				.requestMatchers("/api/v1/products", "/api/v1/products/{productId}").permitAll()
 
+				// 내부 API (서비스 간 통신용)
+				.requestMatchers("/api/v1/internal/**").permitAll()
+				.requestMatchers("/internal/**").permitAll()
+
 				// 카테고리 공개 API
 				.requestMatchers("/api/v1/categories", "/api/v1/categories/{categoryId}").permitAll()
 
