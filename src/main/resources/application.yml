@@ -2,31 +2,32 @@ spring:
   application:
     name: e_commerce
 
-  # ----------------------------
-  # Redis (Local Docker)
-  # ----------------------------
   data:
     redis:
       host: localhost
       port: 6379
-      timeout: 2000ms
+      password:
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 200
+          max-idle: 50
+          min-idle: 20
 
-
-  # ----------------------------
-  # PostgreSQL (Local Docker)
-  # ----------------------------
   datasource:
-    url: jdbc:postgresql://localhost:5400/ecommerce
+    url: jdbc:postgresql://localhost:5432/ecommerce
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 50
 
   # ----------------------------
   # JPA (개발용)
   # ----------------------------
   jpa:
     hibernate:
-      ddl-auto: update     # ⚠️ 개발용만 사용 (운영 X)
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -35,9 +36,16 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 
-# ----------------------------
-# External Services (Local Mock)
-# ----------------------------
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
+  feign:
+    circuitbreaker:
+      enabled: true
+
+
 external:
   product-service:
     url: http://localhost:8080
@@ -46,19 +54,11 @@ external:
   ai-classification:
     url: http://localhost:8080
 
-
-# ----------------------------
-# JWT
-# ----------------------------
 jwt:
   secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
   access-token-validity: 3600000
   refresh-token-validity: 604800000
 
-
-# ----------------------------
-# AI (Local / Dummy)
-# ----------------------------
 ai:
   openai:
     api-key: ${OPENAI_API_KEY:dummy}
@@ -66,19 +66,13 @@ ai:
     model: gpt-4o-mini
 
 
-# ----------------------------
-# Logging (개발 가독성)
-# ----------------------------
+
 logging:
   level:
     root: ERROR
     com.groom.e_commerce: DEBUG
     org.hibernate.SQL: DEBUG
 
-
-# ----------------------------
-# Toss Payments (Sandbox / Local)
-# ----------------------------
 toss:
   payments:
     base-url: https://api.tosspayments.com
@@ -88,3 +82,29 @@ toss:
     fail-url: http://localhost:8080/pay-fail.html
     connect-timeout-ms: 3000
     read-timeout-ms: 5000
+
+# Resilienve4j 정책 설정 - 수정 필요
+resilience4j:
+  circuitbreaker:
+    instances:
+      tossPaymentsClient:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 20
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        minimumNumberOfCalls: 10
+        permittedNumberOfCallsInHalfOpenState: 5
+
+  retry:
+    instances:
+      tossPaymentsClient:
+        maxAttempts: 3
+        waitDuration: 200ms
+        retryExceptions:
+          - java.io.IOException
+          - feign.RetryableException
+
+  timelimiter:
+    instances:
+      tossPaymentsClient:
+        timeoutDuration: 2s
