@@ -11,8 +11,7 @@ public record ResPayment(
 	UUID orderId,
 	String paymentKey,
 	Long amount,
-	PaymentStatus status,
-	LocalDateTime approvedAt
+	PaymentStatus status
 ) {
 	public static ResPayment from(Payment payment) {
 		return new ResPayment(
@@ -20,8 +19,8 @@ public record ResPayment(
 			payment.getOrderId(),
 			payment.getPaymentKey(),
 			payment.getAmount(),
-			payment.getStatus(),
-			payment.getApprovedAt()
+			payment.getStatus()
+
 		);
 	}
 }

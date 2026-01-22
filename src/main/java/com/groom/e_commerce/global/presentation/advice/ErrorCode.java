@@ -95,6 +95,7 @@ public enum ErrorCode {
 	// =====================
 	PAYMENT_NOT_READY(HttpStatus.CONFLICT, "PAYMENT_NOT_READY", "결제창을 열 수 없는 상태입니다."),
 	PAYMENT_CONFIG_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_CONFIG_ERROR", "결제 설정 정보가 올바르지 않습니다."),
+	PAYMENT_INVALID_AMOUNT(HttpStatus.BAD_REQUEST, "PAYMENT_INVALID_AMOUNT", "결제 금액이 올바르지 않습니다."),
 
 
 	// =====================

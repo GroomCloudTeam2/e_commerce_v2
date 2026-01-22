@@ -1,6 +1,5 @@
 package com.groom.e_commerce.payment.domain.entity;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.groom.e_commerce.payment.domain.model.PaymentStatus;
@@ -11,8 +10,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -56,9 +53,6 @@ public class Payment {
 	@Column(name = "status", length = 30, nullable = false)
 	private PaymentStatus status;
 
-	@Column(name = "approved_at")
-	private LocalDateTime approvedAt;
-
 	// 승인 실패 사유(선택)
 	@Column(name = "fail_code", length = 100)
 	private String failCode;
@@ -66,30 +60,12 @@ public class Payment {
 	@Column(name = "fail_message", length = 500)
 	private String failMessage;
 
-	// 환불 실패 사유(선택) - 상태는 PAID 유지 정책을 위해
+	// 환불 실패 사유(선택) - 상태는 PAID 유지 정책
 	@Column(name = "refund_fail_code", length = 100)
 	private String refundFailCode;
 
 	@Column(name = "refund_fail_message", length = 500)
 	private String refundFailMessage;
-
-	@Column(name = "created_at", nullable = false)
-	private LocalDateTime createdAt;
-
-	@Column(name = "updated_at", nullable = false)
-	private LocalDateTime updatedAt;
-
-	@PrePersist
-	void onCreate() {
-		this.createdAt = LocalDateTime.now();
-		this.updatedAt = this.createdAt;
-		if (this.paymentId == null) this.paymentId = UUID.randomUUID();
-	}
-
-	@PreUpdate
-	void onUpdate() {
-		this.updatedAt = LocalDateTime.now();
-	}
 
 	private Payment(UUID orderId, Long amount, String pgProvider) {
 		this.paymentId = UUID.randomUUID();
@@ -97,8 +73,6 @@ public class Payment {
 		this.amount = amount;
 		this.pgProvider = pgProvider;
 		this.status = PaymentStatus.READY;
-		this.createdAt = LocalDateTime.now();
-		this.updatedAt = this.createdAt;
 	}
 
 	public static Payment ready(UUID orderId, Long amount, String pgProvider) {
@@ -117,9 +91,9 @@ public class Payment {
 	}
 
 	/**
-	 * Toss confirm 성공(DONE) 확정 처리
+	 * Toss confirm 성공 확정 처리
 	 */
-	public void markPaid(String paymentKey, Long approvedAmount, LocalDateTime approvedAt) {
+	public void markPaid(String paymentKey, Long approvedAmount) {
 		if (!isConfirmable()) {
 			throw new IllegalStateException("Payment is not confirmable. status=" + status);
 		}
@@ -129,10 +103,9 @@ public class Payment {
 		if (approvedAmount == null || approvedAmount <= 0) {
 			throw new IllegalArgumentException("approvedAmount is invalid");
 		}
-		// 금액 확정(검증은 서비스에서 Order 금액과 비교)
+
 		this.paymentKey = paymentKey;
 		this.amount = approvedAmount;
-		this.approvedAt = approvedAt != null ? approvedAt : LocalDateTime.now();
 		this.status = PaymentStatus.PAID;
 
 		// 성공 시 실패 정보 초기화
@@ -143,7 +116,7 @@ public class Payment {
 	}
 
 	/**
-	 * Toss confirm 실패(ABORTED/EXPIRED 등)
+	 * Toss confirm 실패
 	 */
 	public void markFailed(String failCode, String failMessage) {
 		if (this.status == PaymentStatus.PAID || this.status == PaymentStatus.CANCELLED) {
@@ -168,14 +141,13 @@ public class Payment {
 	}
 
 	/**
-	 * 환불 실패: 상태는 PAID 유지 + 실패 사유만 기록
+	 * 환불 실패: 상태는 PAID 유지
 	 */
 	public void markRefundFailed(String failCode, String failMessage) {
 		if (this.status == PaymentStatus.CANCELLED) {
 			throw new IllegalStateException("Already cancelled payment.");
 		}
 		if (this.status != PaymentStatus.PAID) {
-			// READY/FAILED 에서 환불 실패 기록은 의미가 약해서 막아도 됨
 			throw new IllegalStateException("Refund fail is only meaningful when PAID. status=" + status);
 		}
 		this.refundFailCode = failCode;

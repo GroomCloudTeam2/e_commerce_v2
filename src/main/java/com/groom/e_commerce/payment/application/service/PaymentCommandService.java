@@ -3,7 +3,6 @@ package com.groom.e_commerce.payment.application.service;
 import static com.groom.e_commerce.global.presentation.advice.ErrorCode.*;
 
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -151,9 +150,7 @@ public class PaymentCommandService {
 
 		if ("DONE".equalsIgnoreCase(tossStatus)) {
 			// 승인 성공(DONE) → PAID 전이 + 완료 이벤트 발행
-			LocalDateTime approvedAt = parseTossApprovedAt(tossRes.approvedAt());
-
-			payment.markPaid(req.paymentKey(), amount, approvedAt);
+			payment.markPaid(req.paymentKey(), amount);
 			paymentRepository.save(payment);
 
 			paymentEventPublisher.publishPaymentCompleted(orderId, req.paymentKey(), amount);
@@ -280,24 +277,6 @@ public class PaymentCommandService {
 
 		paymentEventPublisher.publishRefundFailed(orderId, paymentKey, cancelAmount, failCode, failMessage);
 		return ResCancelResult.from(payment, false, "REFUND_FAILED:" + failCode);
-	}
-
-	/**
-	 * Toss approvedAt 파싱
-	 * - Toss가 timezone 포함 문자열을 줄 수 있어서 OffsetDateTime 우선 파싱
-	 * - 파싱 실패하면 안전하게 now()로 대체
-	 */
-	private LocalDateTime parseTossApprovedAt(String approvedAt) {
-		if (approvedAt == null || approvedAt.isBlank()) return LocalDateTime.now();
-		try {
-			return OffsetDateTime.parse(approvedAt).toLocalDateTime();
-		} catch (Exception ignored) {
-			try {
-				return LocalDateTime.parse(approvedAt);
-			} catch (Exception ignored2) {
-				return LocalDateTime.now();
-			}
-		}
 	}
 
 	/**

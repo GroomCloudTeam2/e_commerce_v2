@@ -41,14 +41,7 @@ public interface TossPaymentsClient {
 		String status,
 		@JsonProperty("approvedAt") String approvedAt // Toss가 ISO 문자열로 주는 경우가 많음
 	) {
-		public LocalDateTime approvedAtAsLocalDateTime() {
-			if (approvedAt == null || approvedAt.isBlank()) return null;
-			try {
-				return LocalDateTime.parse(approvedAt);
-			} catch (Exception e) {
-				return null;
-			}
-		}
+
 	}
 
 	record TossCancelRequest(

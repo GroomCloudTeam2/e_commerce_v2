@@ -28,13 +28,14 @@ public class PaymentReadyService {
 
 	/**
 	 * 결제창 오픈용 ready 정보 제공
-	 * - amount는 Payme
-	 * nt에 저장된 값을 사용(SSOT)
-	 * - Payment 상태가 READY일 때만 허용(정책)
+	 * - amount는 Payment에 저장된 값을 SSOT로 사용
+	 * - 요청 amount는 "검증용"으로만 사용(변조 방지)
+	 * - Payment 상태가 READY일 때만 허용
 	 */
-	@Transactional(readOnly = true)
+	@Transactional
 	public ResReadyPayment ready(ReqReadyPayment req) {
 		UUID orderId = req.orderId();
+		Long requestedAmount = req.amount();
 
 		Payment payment = paymentRepository.findByOrderId(orderId)
 			.orElseThrow(() -> new PaymentException(
@@ -58,21 +59,29 @@ public class PaymentReadyService {
 			throw new PaymentException(PAYMENT_CONFIG_ERROR, "toss.payments.successUrl/failUrl missing");
 		}
 
-		Long amount = payment.getAmount();
+		// SSOT: 서버에 저장된 금액
+		Long storedAmount = payment.getAmount();
 
-		String orderName = isBlank(req.orderName()) ? "GROOM ORDER" : req.orderName();
-		String customerName = isBlank(req.customerName()) ? null : req.customerName();
+		// 요청 amount와 서버 저장 amount가 다르면 차단
+		// (프론트/클라이언트가 임의로 금액을 바꿔 결제창 띄우는 걸 막음)
+		if (requestedAmount == null || requestedAmount <= 0) {
+			throw new PaymentException(PAYMENT_INVALID_AMOUNT, "amount is invalid. amount=" + requestedAmount);
+		}
+		if (!storedAmount.equals(requestedAmount)) {
+			throw new PaymentException(
+				PAYMENT_INVALID_AMOUNT,
+				"amount mismatch. stored=" + storedAmount + ", requested=" + requestedAmount
+			);
+		}
 
 		return new ResReadyPayment(
-			PG_TOSS,
-			tossProps.clientKey(),
 			orderId,
-			amount,
-			orderName,
-			customerName,
+			storedAmount,
+			tossProps.clientKey(),
 			tossProps.successUrl(),
 			tossProps.failUrl()
 		);
+
 	}
 
 	private boolean isBlank(String v) {
