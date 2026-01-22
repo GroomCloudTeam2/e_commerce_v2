@@ -28,6 +28,9 @@ import com.groom.e_commerce.product.domain.enums.ProductStatus;
 import com.groom.e_commerce.product.domain.enums.VariantStatus;
 import com.groom.e_commerce.product.domain.repository.ProductRepository;
 import com.groom.e_commerce.product.domain.repository.ProductVariantRepository;
+import com.groom.e_commerce.product.infrastructure.cache.ProductDetailCacheService;
+import com.groom.e_commerce.product.infrastructure.cache.ProductListCacheService;
+import com.groom.e_commerce.product.infrastructure.cache.StockRedisService;
 import com.groom.e_commerce.product.infrastructure.repository.ProductQueryRepository;
 import com.groom.e_commerce.product.presentation.dto.request.ReqProductCreateDtoV1;
 import com.groom.e_commerce.product.presentation.dto.request.ReqProductSuspendDtoV1;
@@ -35,9 +38,6 @@ import com.groom.e_commerce.product.presentation.dto.request.ReqProductUpdateDto
 import com.groom.e_commerce.product.presentation.dto.response.ResProductCreateDtoV1;
 import com.groom.e_commerce.product.presentation.dto.response.ResProductDetailDtoV1;
 import com.groom.e_commerce.product.presentation.dto.response.ResProductDtoV1;
-import com.groom.e_commerce.product.infrastructure.cache.ProductDetailCacheService;
-import com.groom.e_commerce.product.infrastructure.cache.ProductListCacheService;
-import com.groom.e_commerce.product.infrastructure.cache.StockRedisService;
 import com.groom.e_commerce.product.presentation.dto.response.ResProductListDtoV1;
 import com.groom.e_commerce.product.presentation.dto.response.ResProductSearchDtoV1;
 

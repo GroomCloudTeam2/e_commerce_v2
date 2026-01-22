@@ -1,20 +1,19 @@
 package com.groom.e_commerce.order.application.service;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.groom.e_commerce.order.application.port.out.PaymentPort;
-import com.groom.e_commerce.order.domain.entity.Order;
 import com.groom.e_commerce.order.domain.entity.OrderItem;
 import com.groom.e_commerce.order.domain.repository.OrderItemRepository;
 import com.groom.e_commerce.order.presentation.dto.request.OrderCancelRequest;
 import com.groom.e_commerce.product.application.dto.StockManagement;
 import com.groom.e_commerce.product.application.service.ProductServiceV1;
 
-
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

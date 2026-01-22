@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.groom.e_commerce.cart.application.CartService;
 import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 import com.groom.e_commerce.order.domain.entity.Order;
@@ -24,24 +25,13 @@ import com.groom.e_commerce.order.presentation.dto.request.OrderCreateItemReques
 import com.groom.e_commerce.order.presentation.dto.request.OrderCreateRequest;
 import com.groom.e_commerce.order.presentation.dto.request.OrderStatusChangeRequest;
 import com.groom.e_commerce.order.presentation.dto.response.OrderResponse;
-import com.groom.e_commerce.payment.domain.entity.Payment;
-import com.groom.e_commerce.payment.domain.model.PaymentStatus;
 import com.groom.e_commerce.payment.domain.repository.PaymentRepository;
-import com.groom.e_commerce.product.domain.entity.Product;
-import com.groom.e_commerce.product.domain.entity.ProductVariant;
+import com.groom.e_commerce.product.application.dto.ProductCartInfo;
+import com.groom.e_commerce.product.application.dto.StockManagement;
+import com.groom.e_commerce.product.application.service.ProductServiceV1;
 import com.groom.e_commerce.user.application.service.AddressServiceV1;
 import com.groom.e_commerce.user.presentation.dto.response.address.ResAddressDtoV1;
-import com.groom.e_commerce.cart.application.CartService;
 
-import com.groom.e_commerce.product.application.service.ProductServiceV1;
-import com.groom.e_commerce.product.application.dto.StockManagement;
-import com.groom.e_commerce.product.application.dto.ProductCartInfo;
-import com.groom.e_commerce.product.presentation.dto.response.ResProductDtoV1;
-
-
-import jakarta.validation.constraints.Null;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @Service

@@ -7,10 +7,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.groom.e_commerce.product.application.dto.StockManagement;
-import com.groom.e_commerce.product.application.event.dto.OrderCancelledEvent;
 import com.groom.e_commerce.payment.event.model.PaymentCompletedEvent;
 import com.groom.e_commerce.payment.event.model.PaymentFailEvent;
+import com.groom.e_commerce.product.application.dto.StockManagement;
+import com.groom.e_commerce.product.application.event.dto.OrderCancelledEvent;
 import com.groom.e_commerce.product.application.event.dto.StockDeductedEvent;
 import com.groom.e_commerce.product.application.event.dto.StockDeductionFailedEvent;
 import com.groom.e_commerce.product.application.event.publisher.ProductEventPublisher;
