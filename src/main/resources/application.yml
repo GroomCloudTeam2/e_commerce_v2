@@ -2,6 +2,9 @@ spring:
   application:
     name: e_commerce
 
+  main:
+    allow-bean-definition-overriding: true
+
   data:
     redis:
       host: localhost
