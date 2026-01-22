@@ -4,104 +4,96 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class ProductRatingEntityTest {
 
-	@Test
-	void 생성시_평균과_리뷰수는_0이다() {
-		// given
-		ProductRatingEntity rating =
-			new ProductRatingEntity(UUID.randomUUID());
+    @Test
+    @DisplayName("생성자 호출 시 productId와 초기값이 설정된다")
+    void constructor_initializes_fields() {
+        UUID productId = UUID.randomUUID();
 
-		// then
-		assertThat(rating.getAvgRating()).isEqualTo(0.0);
-		assertThat(rating.getReviewCount()).isEqualTo(0);
-	}
+        ProductRatingEntity rating = new ProductRatingEntity(productId);
 
-	@Test
-	void 첫_리뷰_추가시_평균은_해당_점수이다() {
-		ProductRatingEntity rating =
-			new ProductRatingEntity(UUID.randomUUID());
+        assertThat(rating.getProductId()).isEqualTo(productId);
+        assertThat(rating.getAvgRating()).isEqualTo(0.0);
+        assertThat(rating.getReviewCount()).isZero();
+        assertThat(rating.getAiReview()).isNull();
+    }
 
-		// when
-		rating.updateRating(4);
+    @Test
+    @DisplayName("updateRating 호출 시 평균 평점과 리뷰 수가 증가한다")
+    void updateRating_increases_avg_and_count() {
+        ProductRatingEntity rating = new ProductRatingEntity(UUID.randomUUID());
 
-		// then
-		assertThat(rating.getReviewCount()).isEqualTo(1);
-		assertThat(rating.getAvgRating()).isEqualTo(4.0);
-	}
+        rating.updateRating(4);
+        rating.updateRating(5);
 
-	@Test
-	void 여러_리뷰_추가시_평균이_정확히_계산된다() {
-		ProductRatingEntity rating =
-			new ProductRatingEntity(UUID.randomUUID());
+        assertThat(rating.getReviewCount()).isEqualTo(2);
+        assertThat(rating.getAvgRating()).isEqualTo(4.5);
+    }
 
-		// when
-		rating.updateRating(5); // avg 5.0
-		rating.updateRating(4); // avg 4.5
-		rating.updateRating(3); // avg 4.0
+    @Test
+    @DisplayName("updateRating는 소수점 첫째 자리에서 반올림한다")
+    void updateRating_rounds_to_one_decimal() {
+        ProductRatingEntity rating = new ProductRatingEntity(UUID.randomUUID());
 
-		// then
-		assertThat(rating.getReviewCount()).isEqualTo(3);
-		assertThat(rating.getAvgRating()).isEqualTo(4.0);
-	}
+        rating.updateRating(4); // 4.0
+        rating.updateRating(5); // 4.5
+        rating.updateRating(4); // 4.333...
 
-	@Test
-	void 평균은_소수점_한자리로_반올림된다() {
-		ProductRatingEntity rating =
-			new ProductRatingEntity(UUID.randomUUID());
+        assertThat(rating.getAvgRating()).isEqualTo(4.3);
+    }
 
-		// when
-		rating.updateRating(5);
-		rating.updateRating(4); // 4.5
-		rating.updateRating(4); // (5+4+4)/3 = 4.333... → 4.3
+    @Test
+    @DisplayName("removeRating 호출 시 리뷰 수와 평균 평점이 감소한다")
+    void removeRating_decreases_avg_and_count() {
+        ProductRatingEntity rating = new ProductRatingEntity(UUID.randomUUID());
 
-		// then
-		assertThat(rating.getAvgRating()).isEqualTo(4.3);
-	}
+        rating.updateRating(5);
+        rating.updateRating(3); // avg 4.0
 
-	@Test
-	void 리뷰_1개일때_삭제하면_초기화된다() {
-		ProductRatingEntity rating =
-			new ProductRatingEntity(UUID.randomUUID());
+        rating.removeRating(3);
 
-		rating.updateRating(5);
+        assertThat(rating.getReviewCount()).isEqualTo(1);
+        assertThat(rating.getAvgRating()).isEqualTo(5.0);
+    }
 
-		// when
-		rating.removeRating(5);
+    @Test
+    @DisplayName("removeRating는 리뷰가 1개 이하일 때 초기 상태로 리셋된다")
+    void removeRating_resets_when_last_review_removed() {
+        ProductRatingEntity rating = new ProductRatingEntity(UUID.randomUUID());
 
-		// then
-		assertThat(rating.getReviewCount()).isEqualTo(0);
-		assertThat(rating.getAvgRating()).isEqualTo(0.0);
-	}
+        rating.updateRating(4);
 
-	@Test
-	void 여러_리뷰중_하나_삭제시_평균이_재계산된다() {
-		ProductRatingEntity rating =
-			new ProductRatingEntity(UUID.randomUUID());
+        rating.removeRating(4);
 
-		rating.updateRating(5);
-		rating.updateRating(4);
-		rating.updateRating(3); // avg 4.0
+        assertThat(rating.getReviewCount()).isZero();
+        assertThat(rating.getAvgRating()).isEqualTo(0.0);
+    }
 
-		// when
-		rating.removeRating(3); // (5+4)/2 = 4.5
+    @Test
+    @DisplayName("updateAiReview 호출 시 AI 요약이 저장된다")
+    void updateAiReview_sets_value() {
+        ProductRatingEntity rating = new ProductRatingEntity(UUID.randomUUID());
 
-		// then
-		assertThat(rating.getReviewCount()).isEqualTo(2);
-		assertThat(rating.getAvgRating()).isEqualTo(4.5);
-	}
+        rating.updateAiReview("AI SUMMARY TEXT");
 
-	@Test
-	void AI_리뷰_업데이트() {
-		ProductRatingEntity rating =
-			new ProductRatingEntity(UUID.randomUUID());
+        assertThat(rating.getAiReview()).isEqualTo("AI SUMMARY TEXT");
+    }
 
-		// when
-		rating.updateAiReview("AI 요약 리뷰");
+    @Test
+    @DisplayName("reset 호출 시 리뷰 수와 평균 평점이 초기화된다")
+    void reset_clears_rating_state() {
+        ProductRatingEntity rating = new ProductRatingEntity(UUID.randomUUID());
 
-		// then
-		assertThat(rating.getAiReview()).isEqualTo("AI 요약 리뷰");
-	}
+        rating.updateRating(5);
+        rating.updateRating(4);
+
+        rating.reset();
+
+        assertThat(rating.getReviewCount()).isZero();
+        assertThat(rating.getAvgRating()).isEqualTo(0.0);
+    }
 }

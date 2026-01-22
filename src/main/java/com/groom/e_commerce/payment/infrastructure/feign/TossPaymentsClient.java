@@ -3,7 +3,9 @@ package com.groom.e_commerce.payment.infrastructure.feign;
 import java.time.LocalDateTime;
 
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.groom.e_commerce.payment.infrastructure.config.TossFeignConfig;

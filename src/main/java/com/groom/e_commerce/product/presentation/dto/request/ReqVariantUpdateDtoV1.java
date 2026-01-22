@@ -1,7 +1,5 @@
 package com.groom.e_commerce.product.presentation.dto.request;
 
-import java.math.BigDecimal;
-
 import com.groom.e_commerce.product.domain.enums.VariantStatus;
 
 import jakarta.validation.constraints.PositiveOrZero;

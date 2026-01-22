@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.groom.e_commerce.review.application.service.ReviewQueryService;
-import com.groom.e_commerce.review.application.service.ReviewService;
 import com.groom.e_commerce.review.presentation.dto.response.ProductReviewResponse;
 
 import io.swagger.v3.oas.annotations.Operation;

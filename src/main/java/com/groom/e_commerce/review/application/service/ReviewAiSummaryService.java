@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import com.groom.e_commerce.global.infrastructure.client.OpenAi.OpenAiRestClient;
+import com.groom.e_commerce.global.infrastructure.client.OpenAi.OpenAiClient;
 import com.groom.e_commerce.product.domain.entity.Product;
 import com.groom.e_commerce.product.domain.repository.ProductRepository;
 import com.groom.e_commerce.review.application.support.AiReviewPromptBuilder;
@@ -30,7 +30,7 @@ public class ReviewAiSummaryService {
 	private final ReviewRepository reviewRepository;
 	private final ProductRatingRepository productRatingRepository;
 	private final AiReviewPromptBuilder promptBuilder;
-	private final OpenAiRestClient openAiRestClient;
+	private final OpenAiClient openAiClient;
 	private final ProductRepository productRepository;
 
 	public void generate(UUID productId) {
@@ -46,11 +46,14 @@ public class ReviewAiSummaryService {
 							PageRequest.of(0, 10)
 						)
 					));
+
 		String productTitle = productRepository.findByIdAndNotDeleted(productId)
 			.map(Product::getTitle)
 			.orElseThrow(() -> new IllegalStateException("상품 제목이 없습니다."));
+
 		String prompt = promptBuilder.build(productTitle, reviews);
-		String aiReview = openAiRestClient.summarizeReviews(prompt);
+
+		String aiReview = openAiClient.summarizeReviews(prompt);
 
 		ProductRatingEntity rating = productRatingRepository
 			.findByProductId(productId)
@@ -58,6 +61,5 @@ public class ReviewAiSummaryService {
 
 		rating.updateAiReview(aiReview);
 		productRatingRepository.save(rating);
-
 	}
 }

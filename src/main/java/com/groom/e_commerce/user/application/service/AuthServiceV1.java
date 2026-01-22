@@ -8,9 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.groom.e_commerce.global.infrastructure.config.security.JwtUtil;
 import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
-import com.groom.e_commerce.global.infrastructure.config.security.JwtUtil;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerEntity;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerStatus;
 import com.groom.e_commerce.user.domain.entity.user.UserEntity;
@@ -21,8 +21,8 @@ import com.groom.e_commerce.user.domain.event.UserSignedUpEvent;
 import com.groom.e_commerce.user.domain.repository.OwnerRepository;
 import com.groom.e_commerce.user.domain.repository.UserRepository;
 import com.groom.e_commerce.user.presentation.dto.request.user.ReqLoginDtoV1;
-import com.groom.e_commerce.user.presentation.dto.request.user.ReqSignupDtoV1;import com.groom.e_commerce.user.presentation.dto.response.user.ResTokenDtoV1;
-
+import com.groom.e_commerce.user.presentation.dto.request.user.ReqSignupDtoV1;
+import com.groom.e_commerce.user.presentation.dto.response.user.ResTokenDtoV1;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,10 +35,9 @@ public class AuthServiceV1 {
 
 	private final UserRepository userRepository;
 	private final OwnerRepository ownerRepository;
-	// private final PasswordEncoder passwordEncoder;
-	private final ApplicationEventPublisher eventPublisher;
-	private final JwtUtil jwtUtil;
 	private final PasswordEncoder passwordEncoder;
+	private final JwtUtil jwtUtil;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public void signup(ReqSignupDtoV1 request) {
@@ -143,18 +142,6 @@ public class AuthServiceV1 {
 
 	public void logout() {
 		log.info("User logged out");
-	}
-
-	private void validateDuplicateEmail(String email) {
-		if (userRepository.existsByEmailAndDeletedAtIsNull(email)) {
-			throw new CustomException(ErrorCode.EMAIL_DUPLICATED);
-		}
-	}
-
-	private void validateDuplicateNickname(String nickname) {
-		if (userRepository.existsByNicknameAndDeletedAtIsNull(nickname)) {
-			throw new CustomException(ErrorCode.NICKNAME_DUPLICATED);
-		}
 	}
 
 	private void validateOwnerFields(ReqSignupDtoV1 request) {

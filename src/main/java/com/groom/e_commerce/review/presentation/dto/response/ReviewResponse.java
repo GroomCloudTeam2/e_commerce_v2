@@ -41,7 +41,7 @@ public class ReviewResponse {
 			.rating(readModel.getRating())
 			.content(readModel.getContent())
 			.createdAt(readModel.getCreatedAt())
-			.rating(0)
+			.rating(0) //Redis read model does not contain rating
 			.build();
 	}
 }
