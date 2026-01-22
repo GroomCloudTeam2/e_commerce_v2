@@ -225,13 +225,18 @@
     const $displayAmount = document.getElementById("displayAmount");
     const $itemPrice = document.getElementById("itemPrice");
     const $finalPrice = document.getElementById("finalPrice");
+    const $productName = document.getElementById("productName");
+
+    // ===== State =====
+    let lastReady = null; // ready 응답 캐시
 
     // ===== Utils =====
-    const formatPrice = (price) => price.toLocaleString("ko-KR") + "원";
+    const formatPrice = (price) => Number(price).toLocaleString("ko-KR") + "원";
 
     const showAmount = (value) => {
-        if (value > 0) {
-            const formatted = formatPrice(value);
+        const v = Number(value);
+        if (v > 0) {
+            const formatted = formatPrice(v);
             $displayAmount.textContent = formatted;
             $itemPrice.textContent = formatted;
             $finalPrice.textContent = formatted;
@@ -261,84 +266,126 @@
         return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
     };
 
-    // ===== Live amount rendering =====
-    $amount.addEventListener("input", (e) => {
-        const value = Number(e.target.value);
-        showAmount(value);
-    });
+    const resetLog = () => {
+        $log.textContent = "";
+        $logContainer.style.display = "none";
+    };
+
+    // ===== UI init =====
+    // amount는 서버에서 내려준 값만 사용하도록 readOnly 처리
+    $amount.readOnly = true;
+    $amount.placeholder = "서버에서 확정된 금액이 표시됩니다";
 
     // ===== Query param preset =====
-    // /toss-test.html?orderId=...&amount=...&auto=1
+    // /toss-test.html?orderId=...&auto=1
     const params = new URLSearchParams(location.search);
     const presetOrderId = params.get("orderId");
-    const presetAmount = params.get("amount");
     const auto = params.get("auto");
 
     if (presetOrderId) $orderId.value = presetOrderId;
-    if (presetAmount) {
-        $amount.value = presetAmount;
-        showAmount(Number(presetAmount));
+
+    // ===== Ready 호출 (SSOT: amount는 서버 응답 사용) =====
+    async function fetchReady(orderId) {
+        log("⏳ [READY] /api/v1/payments/ready 호출 중...");
+
+        const readyRes = await fetch("/api/v1/payments/ready", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                orderId,
+                orderName: $productName?.textContent || "테스트 상품",
+                customerName: "테스트 고객"
+            })
+        });
+
+        if (!readyRes.ok) {
+            const err = await safeText(readyRes);
+            throw new Error(`READY 실패 (${readyRes.status}) ${err}`);
+        }
+
+        const ready = await readyRes.json();
+        log("✅ [READY] 응답:\n" + JSON.stringify(ready, null, 2));
+
+        // 필수 필드 검증(최소)
+        const required = ["clientKey", "orderId", "amount", "successUrl", "failUrl"];
+        for (const k of required) {
+            if (ready[k] === undefined || ready[k] === null || ready[k] === "") {
+                throw new Error(`READY 응답에 ${k} 가 없습니다.`);
+            }
+        }
+
+        // UI 갱신: 서버 확정 금액으로 덮어쓰기
+        showAmount(Number(ready.amount));
+        $amount.value = Number(ready.amount);
+        $amount.readOnly = true;
+
+        lastReady = ready;
+        return ready;
     }
 
-    // ===== Main =====
-    $btn.addEventListener("click", async () => {
-        $log.textContent = "";
-        $logContainer.style.display = "none";
+    // ===== 페이지 로드시 자동 READY (orderId가 있으면) =====
+    async function preloadReadyIfPossible() {
+        resetLog();
 
         const orderId = $orderId.value.trim();
-        const amount = Number($amount.value);
+        if (!orderId) {
+            showAmount(0);
+            return;
+        }
+        if (!isUuid(orderId)) {
+            log("❌ orderId(UUID) 형식이 아닙니다.");
+            showAmount(0);
+            return;
+        }
 
+        try {
+            setBusy(true);
+            await fetchReady(orderId);
+            log("✅ [AUTO] ready 사전 로딩 완료. 결제 버튼을 누르면 결제창이 열립니다.");
+        } catch (e) {
+            log("❌ [AUTO] " + (e?.message || String(e)));
+            showAmount(0);
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    // orderId 입력 변경 시에도 ready 다시 로드하고 싶으면(선택)
+    $orderId.addEventListener("change", () => {
+        preloadReadyIfPossible();
+    });
+
+    // ===== 결제 버튼 클릭 =====
+    $btn.addEventListener("click", async () => {
+        resetLog();
+
+        const orderId = $orderId.value.trim();
         if (!orderId) { log("❌ 주문번호를 입력해주세요"); return; }
         if (!isUuid(orderId)) { log("❌ 주문번호(UUID) 형식이 아닙니다"); return; }
-        if (!amount || amount < 1) { log("❌ 결제금액을 1원 이상으로 입력해주세요"); return; }
 
         setBusy(true);
 
         try {
-            log("⏳ [1] /api/v1/payments/ready 호출 중...");
+            // ready가 없으면 먼저 가져오기
+            const ready = lastReady && lastReady.orderId === orderId
+                ? lastReady
+                : await fetchReady(orderId);
 
-            // same-origin 호출: 페이지가 반드시 서버(8080)에서 서빙되어야 함
-            const readyRes = await fetch("/api/v1/payments/ready", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ orderId, amount })
-            });
-
-            if (!readyRes.ok) {
-                const err = await safeText(readyRes);
-                log("❌ READY 실패:", readyRes.status, err);
-                return;
-            }
-
-            const ready = await readyRes.json();
-            log("✅ [2] READY 응답:\n" + JSON.stringify(ready, null, 2));
-
-            // 필수 필드 검증
-            const required = ["clientKey", "orderId", "amount", "orderName", "customerName", "successUrl", "failUrl"];
-            for (const k of required) {
-                if (ready[k] === undefined || ready[k] === null || ready[k] === "") {
-                    log(`❌ READY 응답에 ${k} 가 없습니다.`);
-                    return;
-                }
-            }
-
-            // Toss 결제창 호출
-            log("🚀 [3] 결제창 요청 시작...");
+            log("🚀 [PAY] 결제창 요청 시작...");
 
             const tossPayments = TossPayments(ready.clientKey);
-            const payment = tossPayments.payment({ customerKey: "test-customer-key" });
+            const payment = tossPayments.payment({ customerKey: orderId }); // 테스트용으로 orderId 사용
 
             await payment.requestPayment({
                 method: "CARD",
                 amount: { currency: "KRW", value: Number(ready.amount) },
                 orderId: ready.orderId,
-                orderName: ready.orderName,
-                customerName: ready.customerName,
+                orderName: ready.orderName || ($productName?.textContent || "테스트 상품"),
+                customerName: ready.customerName || "테스트 고객",
                 successUrl: ready.successUrl,
                 failUrl: ready.failUrl,
             });
 
-            // requestPayment 호출 후에는 보통 toss가 리다이렉트/팝업을 진행하므로 여기까지 오지 않을 수 있음
             log("ℹ️ 결제창이 열렸습니다. 결제 완료 후 successUrl로 이동합니다.");
         } catch (e) {
             log("❌ 예외 발생:", e?.message || String(e));
@@ -348,10 +395,14 @@
         }
     });
 
-    // auto=1이면 자동 실행
+    // ===== 최초 자동 로딩 =====
+    preloadReadyIfPossible();
+
+    // auto=1이면 ready 후 자동 결제 버튼 클릭(테스트용)
     if (auto === "1") {
-        setTimeout(() => $btn.click(), 300);
+        setTimeout(() => $btn.click(), 400);
     }
 </script>
+
 </body>
 </html>
