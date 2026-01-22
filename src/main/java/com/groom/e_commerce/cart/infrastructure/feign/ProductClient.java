@@ -27,7 +27,7 @@ import com.groom.e_commerce.global.infrastructure.feign.config.FeignConfig;
 )
 public interface ProductClient {
 
-    @PostMapping("/internal/api/v1/products/cart")
+    @PostMapping("/api/v1/internal/products/bulk-info")
     List<ProductCartInfo> getProductCartInfos(
         @RequestBody List<StockManagement> requests
     );

@@ -14,7 +14,7 @@ import com.groom.e_commerce.review.infrastructure.feign.dto.OrderReviewValidatio
 	name = "order-service",
 	url = "${external.order-service.url}",
 	configuration = FeignConfig.class,
-	fallback = ProductClientFallback.class
+	fallback = OrderClientFallback.class
 )
 public interface OrderClient {
 

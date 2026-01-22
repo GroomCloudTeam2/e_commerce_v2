@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import com.groom.e_commerce.order.infrastructure.client.dto.UserAddressResponse;
 
-@FeignClient(name = "user-service", path = "/internal/users")
+@FeignClient(name = "user-service", url = "${external.user-service.url}", path = "/internal/users")
 public interface UserClient {
 
 	/**
