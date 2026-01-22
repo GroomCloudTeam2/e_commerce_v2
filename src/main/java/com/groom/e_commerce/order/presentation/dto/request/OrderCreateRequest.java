@@ -1,4 +1,5 @@
 package com.groom.e_commerce.order.presentation.dto.request;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -12,6 +13,9 @@ public class OrderCreateRequest {
 
 	// 결제 수단 ID
 	private UUID paymentMethodId;
+
+	// 총 결제 금액
+	private Long totalAmount;
 
 	// 주문 상품 목록
 	private List<OrderCreateItemRequest> items;

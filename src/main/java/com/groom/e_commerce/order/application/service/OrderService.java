@@ -2,42 +2,28 @@ package com.groom.e_commerce.order.application.service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.groom.e_commerce.global.presentation.advice.CustomException;
-import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 import com.groom.e_commerce.order.domain.entity.Order;
-import com.groom.e_commerce.order.domain.event.outbound.OrderCancelledEvent;
-import com.groom.e_commerce.order.domain.event.outbound.OrderConfirmedEvent;
 import com.groom.e_commerce.order.domain.event.outbound.OrderCreatedEvent;
-import com.groom.e_commerce.order.domain.entity.OrderItem;
-import com.groom.e_commerce.order.domain.repository.OrderItemRepository;
 import com.groom.e_commerce.order.domain.repository.OrderRepository;
-import com.groom.e_commerce.order.presentation.dto.request.OrderCreateItemRequest;
+import com.groom.e_commerce.order.infrastructure.client.ProductClient;
+import com.groom.e_commerce.order.infrastructure.client.UserClient;
+import com.groom.e_commerce.order.domain.entity.OrderItem;
+import com.groom.e_commerce.order.infrastructure.client.dto.UserAddressResponse;
 import com.groom.e_commerce.order.presentation.dto.request.OrderCreateRequest;
 import com.groom.e_commerce.order.presentation.dto.response.OrderResponse;
 
-import java.awt.print.Pageable;
-import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -46,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final UserClient userClient;
+    private final ProductClient productClient;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -53,150 +41,97 @@ public class OrderService {
      */
     @Transactional
     public UUID createOrder(UUID userId, OrderCreateRequest request) {
-        // ... 사용자 및 주소 확인, 상품 정보 조회 등 로직 ...
-        // Order order = Order.create(...)
-        // Order order = new Order(); // Placeholder for actual creation
-		Order order = new Order(userId, "ORD-" + UUID.randomUUID().toString().substring(0, 8),
-			request.getTotalAmount(), request.toOrderItems());
+        // 1. 사용자 검증 (Synchronous)
+        userClient.isValidUser(userId, userId);
+
+        // 2. 주소 정보 조회 (Snapshot용)
+        UserAddressResponse address = userClient.getUserAddress(userId, userId);
+
+        // 3. Order 엔티티 생성 (Transient)
+        Order order = Order.builder()
+                .buyerId(userId)
+                .orderNumber(generateOrderNumber())
+                .totalPaymentAmount(request.getTotalAmount())
+                .recipientName(address.getRecipientName())
+                .recipientPhone(address.getRecipientPhone())
+                .zipCode(address.getZipCode())
+                .shippingAddress(address.getAddress() + " " + address.getDetailAddress())
+                .shippingMemo("부재 시 문 앞에 놓아주세요") // TODO: Request에서 받거나 기본값
+                .build();
+
+        // 4. OrderItem 생성 및 추가
+        for (var itemRequest : request.getItems()) {
+            OrderItem orderItem = OrderItem.builder()
+                    .order(order)
+                    .productId(itemRequest.getProductId())
+                    .variantId(itemRequest.getVariantId())
+                    .ownerId(UUID.randomUUID()) // TODO: Product Owner ID 필요 (ProductClient에서 받아오거나 Request에 포함)
+                    .productTitle(itemRequest.getProductTitle())
+                    .productThumbnail(itemRequest.getProductThumbnail())
+                    .optionName(itemRequest.getOptionName())
+                    .unitPrice(itemRequest.getUnitPrice())
+                    .quantity(itemRequest.getQuantity())
+                    .build();
+
+            order.addItem(orderItem);
+
+            // 재고 가점유 요청
+            productClient.reserveStock(new com.groom.e_commerce.order.infrastructure.client.dto.StockReserveRequest(
+                    itemRequest.getProductId(),
+                    itemRequest.getVariantId(),
+                    itemRequest.getQuantity()));
+        }
+
+        // 5. DB 저장
         Order savedOrder = orderRepository.save(order);
         UUID orderId = savedOrder.getOrderId();
 
-        // 트랜잭션이 성공적으로 커밋된 후 결제 요청 이벤트를 발행합니다.
-        eventPublisher.publishEvent(new OrderCreatedEvent(orderId));
-        log.info("주문(ID: {})이 생성되었습니다. 결제 프로세스를 시작합니다.", orderId);
-			// // 5. 상품 스냅샷 생성 (OrderItem)
-			// OrderItem orderItem = OrderItem.builder()
-			// 	.order(order)
-			// 	.productId(productInfo.getProductId())
-			// 	.variantId(productInfo.getVariantId())
-			// 	.ownerId(productInfo.getOwnerId())
-			// 	.productTitle(productInfo.getProductName())
-			// 	.productThumbnail(productInfo.getThumbnailUrl())
-			// 	.optionName(productInfo.getOptionName() != null ? productInfo.getOptionName() : "기본")
-			// 	.unitPrice(productInfo.getPrice())
-			// 	.quantity(itemReq.getQuantity())
-			// 	.build();
+        // 6. 결제 요청 이벤트 발행
+        eventPublisher.publishEvent(new OrderCreatedEvent(orderId, order.getTotalPaymentAmount()));
 
+        log.info("주문(ID: {})이 생성되었습니다. 결제 프로세스를 시작합니다.", orderId);
         return orderId;
     }
-		// 	orderItems.add(orderItem);
-		//
-		// 	// 총액 합산
-		// 	totalAmount = totalAmount + (productInfo.getPrice()*(itemReq.getQuantity()));
-		// }
-	private String generateOrderNumber() {
-		String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-		int randomPart = ThreadLocalRandom.current().nextInt(100000, 999999);
-		return datePart + "-" + randomPart;
-	}
 
-	@Transactional(readOnly = true)
-	public
-	Page<OrderResponse> getMyOrders(UUID buyerId, Pageable pageable) {
-		return orderRepository.findAllByBuyerId(buyerId, pageable)
-			.map(OrderResponse::from);
-	}
-	@Transactional(readOnly = true) // 중요: 조회 전용 트랜잭션 (성능 최적화)
-	public OrderResponse getOrder(UUID orderId) {
-		Order order = orderRepository.findByIdWithItems(orderId)
-			.orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다. ID: " + orderId));
-
-		return OrderResponse.from(order);
-	}
-
-	// @Transactional(readOnly = true)
-	// public OrderResponse getOrder(UUID orderId) {
-	// 	return OrderResponse.from(findOrderById(orderId));
-	// }
-
-	@Transactional(readOnly = true)
-	public List<OrderResponse> getOrdersByProduct(UUID productId) {
-		return orderRepository.findAllByProductId(productId).stream()
-			.map(OrderResponse::from)
-			.toList();
-	}
-
-    /**
-     * 결제 완료를 처리합니다.
-     * @param orderId 주문 ID
-     */
-    public void completePayment(UUID orderId) {
-        Order order = findOrderById(orderId);
-        if (order.markPaid()) {
-            orderRepository.save(order);
-            log.info("주문(ID: {}) 상태를 PAID로 변경했습니다.", orderId);
-        } else {
-            log.warn("주문(ID: {})은 PENDING 상태가 아니므로 상태를 변경하지 않았습니다. (현재 상태: {}). 중복 이벤트이거나 로직 오류일 수 있습니다.",
-                orderId, order.getStatus());
-        }
+    private String generateOrderNumber() {
+        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        int randomPart = ThreadLocalRandom.current().nextInt(100000, 999999);
+        return datePart + "-" + randomPart;
     }
 
-    /**
-     * 결제 실패를 처리합니다.
-     * @param orderId 주문 ID
-     */
-    public void failPayment(UUID orderId) {
-        Order order = findOrderById(orderId);
-        if (order.markFailed()) {
-            orderRepository.save(order);
-            log.info("주문(ID: {}) 상태를 FAILED로 변경했습니다.", orderId);
-        } else {
-            log.warn("주문(ID: {})은 PENDING 상태가 아니므로 상태를 변경하지 않았습니다. (현재 상태: {}).",
-                orderId, order.getStatus());
-        }
+    public Page<OrderResponse> getMyOrders(UUID buyerId, Pageable pageable) {
+        return orderRepository.findAllByBuyerId(buyerId, pageable)
+                .map(OrderResponse::from);
     }
 
-    /**
-     * 주문을 확정합니다. (재고 차감 완료)
-     * @param orderId 주문 ID
-     */
-    public void confirmOrder(UUID orderId) {
-        Order order = findOrderById(orderId);
-        if (order.markConfirmed()) {
-            orderRepository.save(order);
-            // 주문 확정 이벤트 발행 (장바구니 정리 등 후속 처리를 위해)
-            eventPublisher.publishEvent(new OrderConfirmedEvent(orderId));
-            log.info("주문(ID: {})이 최종 확정되었습니다. (상태: CONFIRMED)", orderId);
-        } else {
-            log.warn("주문(ID: {})은 PAID 상태가 아니므로 확정 처리하지 않았습니다. (현재 상태: {}).",
-                orderId, order.getStatus());
-        }
+    public OrderResponse getOrder(UUID orderId) {
+        Order order = orderRepository.findById(orderId) // Assuming findById works with UUID as per previous analysis
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다. ID: " + orderId));
+
+        return OrderResponse.from(order);
     }
 
-    /**
-     * 주문을 취소합니다. (환불 성공 시)
-     * @param orderId 주문 ID
-     */
+    public List<OrderResponse> getOrdersByProduct(UUID productId) {
+        return orderRepository.findAllByProductId(productId).stream()
+                .map(OrderResponse::from)
+                .toList();
+    }
+
+    @Transactional
     public void cancelOrder(UUID orderId) {
-        Order order = findOrderById(orderId);
-        if (order.markCancelled()) {
-            orderRepository.save(order);
-            eventPublisher.publishEvent(new OrderCancelledEvent(orderId));
-            log.info("주문(ID: {})이 최종 취소되었습니다. (상태: CANCELLED)", orderId);
-        } else {
-            log.warn("주문(ID: {})을 취소 상태로 변경할 수 없습니다. (현재 상태: {}).",
-                orderId, order.getStatus());
-        }
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다. ID: " + orderId));
+        order.cancel();
+        orderRepository.save(order);
     }
 
-    /**
-     * 환불 실패 시 주문 상태를 MANUAL_CHECK로 변경합니다.
-     * @param orderId 주문 ID
-     */
-    public void failRefund(UUID orderId) {
-        Order order = findOrderById(orderId);
-        if (order.needsManualCheck()) {
-            orderRepository.save(order);
-            log.error("주문(ID: {})의 환불에 실패하여 수동 확인이 필요합니다. (상태: MANUAL_CHECK)", orderId);
-        } else {
-            log.warn("주문(ID: {})을 수동 확인 상태로 변경할 수 없습니다. (현재 상태: {}).",
-                orderId, order.getStatus());
-        }
-    }
-
-    private Order findOrderById(UUID orderId) {
-        return orderRepository.findById(orderId)
-            .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다. ID: " + orderId));
+    public com.groom.e_commerce.order.presentation.dto.internal.OrderValidationResponse getOrderForPayment(
+            UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다. ID: " + orderId));
+        return new com.groom.e_commerce.order.presentation.dto.internal.OrderValidationResponse(
+                order.getOrderId(),
+                order.getTotalPaymentAmount(),
+                order.getStatus());
     }
 }
-

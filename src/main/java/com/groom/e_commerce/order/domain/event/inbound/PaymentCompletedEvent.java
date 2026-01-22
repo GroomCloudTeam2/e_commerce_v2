@@ -7,6 +7,6 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public class PaymentSuccessEvent {
+public class PaymentCompletedEvent {
     private final UUID orderId;
 }

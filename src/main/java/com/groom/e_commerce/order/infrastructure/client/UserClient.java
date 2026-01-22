@@ -9,10 +9,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import com.groom.e_commerce.order.infrastructure.client.dto.UserAddressResponse;
 
-@FeignClient(
-	name = "user-service",
-	path = "/internal/users"
-)
+@FeignClient(name = "user-service", path = "/internal/users")
 public interface UserClient {
 
 	/**
@@ -21,19 +18,17 @@ public interface UserClient {
 	 * - 탈퇴/정지 여부
 	 */
 	@GetMapping("/{userId}/validate")
-	static void isValidUser(
-		@PathVariable("userId") UUID userId,
-		@RequestHeader("X-User-Id") UUID currentUserId // 필요 시 헤더 전달
-	) {
-
-	}
+	void isValidUser(
+			@PathVariable("userId") UUID userId,
+			@RequestHeader("X-User-Id") UUID currentUserId // 필요 시 헤더 전달
+	);
 
 	/**
 	 * 배송지 정보 조회 (스냅샷 생성용)
 	 */
 	@GetMapping("/{userId}/address")
 	UserAddressResponse getUserAddress(
-		@PathVariable("userId") UUID userId,
-		@RequestHeader("X-User-Id") UUID currentUserId // 필요 시 헤더 전달
+			@PathVariable("userId") UUID userId,
+			@RequestHeader("X-User-Id") UUID currentUserId // 필요 시 헤더 전달
 	);
 }

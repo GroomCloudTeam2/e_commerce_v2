@@ -14,7 +14,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -77,15 +76,14 @@ public class Order extends BaseEntity {
 
 	@Builder
 	public Order(
-		UUID buyerId,
-		String orderNumber,
-		Long totalPaymentAmount,
-		String recipientName,
-		String recipientPhone,
-		String zipCode,
-		String shippingAddress,
-		String shippingMemo
-	) {
+			UUID buyerId,
+			String orderNumber,
+			Long totalPaymentAmount,
+			String recipientName,
+			String recipientPhone,
+			String zipCode,
+			String shippingAddress,
+			String shippingMemo) {
 		this.orderId = UUID.randomUUID();
 		this.buyerId = buyerId;
 		this.orderNumber = orderNumber;
@@ -98,73 +96,59 @@ public class Order extends BaseEntity {
 		this.status = OrderStatus.PENDING;
 	}
 
-    /**
-     * 결제 성공 처리. PENDING 상태일 때만 PAID로 변경.
-     * @return 상태 변경이 일어났으면 true, 아니면 false.
-     */
-    public boolean markPaid() {
-        if (this.status == OrderStatus.PENDING) {
-            this.status = OrderStatus.PAID;
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * 결제 실패 처리. PENDING 상태일 때만 FAILED로 변경.
-     * @return 상태 변경이 일어났으면 true, 아니면 false.
-     */
-    public boolean markFailed() {
-        if (this.status == OrderStatus.PENDING) {
-            this.status = OrderStatus.FAILED;
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * 주문 확정 처리 (재고 확보 완료). PAID 상태일 때만 CONFIRMED로 변경.
-     * @return 상태 변경이 일어났으면 true, 아니면 false.
-     */
-    public boolean markConfirmed() {
-        if (this.status == OrderStatus.PAID) {
-            this.status = OrderStatus.CONFIRMED;
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * 주문 취소 처리.
-     * @return 상태 변경이 일어났으면 true, 아니면 false.
-     */
-	public boolean markCancelled() {
-		if (this.status == OrderStatus.SHIPPING ||
-			this.status == OrderStatus.DELIVERED ||
-			this.status == OrderStatus.COMPLETED) {
-			throw new IllegalStateException("이미 배송이 시작되었거나 완료된 주문은 취소할 수 없습니다.");
+	/**
+	 * 1. 결제 성공 (PENDING -> PAID)
+	 */
+	public void confirmPayment() {
+		if (this.status != OrderStatus.PENDING) {
+			throw new IllegalStateException("결제 확인은 PENDING 상태에서만 가능합니다. 현재: " + this.status);
 		}
-
-		if (this.status != OrderStatus.CANCELLED) {
-			this.status = OrderStatus.CANCELLED;
-			return true;
-		}
-		return false;
+		this.status = OrderStatus.PAID;
 	}
 
-    /**
-     * 수동 확인 필요 처리.
-     * @return 상태 변경이 일어났으면 true, 아니면 false.
-     */
-	public boolean needsManualCheck() {
-		if (this.status == OrderStatus.COMPLETED || this.status == OrderStatus.CANCELLED) {
-			throw new IllegalStateException("최종 완료되거나 취소된 주문은 수동 확인 상태로 변경할 수 없습니다.");
+	/**
+	 * 3. 최종 확정 (PAID -> CONFIRMED)
+	 */
+	public void complete() {
+		if (this.status != OrderStatus.PAID) {
+			throw new IllegalStateException("주문 확정은 결제 완료(PAID) 이후에만 가능합니다. 현재: " + this.status);
 		}
+		this.status = OrderStatus.CONFIRMED;
+	}
 
-		if (this.status != OrderStatus.MANUAL_CHECK) {
-			this.status = OrderStatus.MANUAL_CHECK;
-			return true;
+	/**
+	 * 4. 실패 처리 (결제 실패, 재고 실패 등)
+	 */
+	public void fail() {
+		if (this.status == OrderStatus.CONFIRMED || this.status == OrderStatus.CANCELLED) {
+			throw new IllegalStateException("이미 완료되거나 취소된 주문은 실패 처리할 수 없습니다.");
 		}
-		return false;
+		this.status = OrderStatus.FAILED;
+	}
+
+	/**
+	 * 5. 취소 처리
+	 */
+	public void cancel() {
+		if (this.status == OrderStatus.CONFIRMED) {
+			throw new IllegalStateException("이미 완료된 주문은 취소할 수 없습니다.");
+		}
+		this.status = OrderStatus.CANCELLED;
+	}
+
+	public void addItem(OrderItem item) {
+		this.items.add(item);
+		// item.setOrder(this); // If OrderItem has setOrder, but it seems it's set in
+		// constructor or builder
+	}
+
+	/**
+	 * 6. 수동 확인 필요 (환불 실패 등)
+	 */
+	public void requireManualCheck() {
+		if (this.status == OrderStatus.CONFIRMED || this.status == OrderStatus.CANCELLED) {
+			throw new IllegalStateException("이미 완료되거나 취소된 주문은 수동 확인 상태로 변경할 수 없습니다.");
+		}
+		this.status = OrderStatus.MANUAL_CHECK;
 	}
 }

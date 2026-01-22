@@ -10,4 +10,10 @@ public class OrderCreateItemRequest {
 	private UUID productId;
 	private UUID variantId;
 	private Integer quantity;
+
+	// Snapshot fields from frontend
+	private String productTitle;
+	private String productThumbnail;
+	private String optionName;
+	private Long unitPrice;
 }

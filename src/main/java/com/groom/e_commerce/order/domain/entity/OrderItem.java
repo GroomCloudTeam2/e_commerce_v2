@@ -70,8 +70,8 @@ public class OrderItem extends BaseEntity {
 
 	@Builder
 	public OrderItem(Order order, UUID productId, UUID variantId, UUID ownerId,
-		String productTitle, String productThumbnail, String optionName,
-		Long unitPrice, Integer quantity) {
+			String productTitle, String productThumbnail, String optionName,
+			Long unitPrice, Integer quantity) {
 		this.order = order;
 		this.productId = productId;
 		this.variantId = variantId;
