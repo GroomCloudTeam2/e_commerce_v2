@@ -4,8 +4,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import com.groom.e_commerce.payment.application.service.PaymentCommandService;
-import com.groom.e_commerce.payment.event.model.OrderCancelledEvent;
-import com.groom.e_commerce.payment.event.model.OrderCreatedEvent;
 import com.groom.e_commerce.payment.presentation.dto.request.ReqCancelPayment;
 
 import lombok.RequiredArgsConstructor;
