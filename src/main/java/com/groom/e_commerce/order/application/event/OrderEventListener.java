@@ -4,8 +4,8 @@ import com.groom.e_commerce.order.domain.entity.Order;
 import com.groom.e_commerce.order.domain.event.outbound.OrderConfirmedEvent;
 import com.groom.e_commerce.order.domain.repository.OrderRepository;
 import com.groom.e_commerce.payment.event.model.PaymentCompletedEvent;
-// import com.groom.e_commerce.payment.event.model.PaymentFailedEvent;
-// import com.groom.e_commerce.payment.event.model.RefundFailedEvent;
+import com.groom.e_commerce.payment.event.model.PaymentFailEvent;
+import com.groom.e_commerce.payment.event.model.RefundFailEvent;
 import com.groom.e_commerce.payment.event.model.RefundSucceededEvent;
 import com.groom.e_commerce.product.application.event.dto.StockDeductedEvent;
 import com.groom.e_commerce.product.application.event.dto.StockDeductionFailedEvent;
@@ -47,12 +47,12 @@ public class OrderEventListener {
         order.complete();
         orderRepository.save(order);
 
-        eventPublisher.publishEvent(new OrderConfirmedEvent(order.getUserId(), order.getOrderId()));
+        eventPublisher.publishEvent(new OrderConfirmedEvent(order.getBuyerId(), order.getOrderId()));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handlePaymentFailed(PaymentFailedEvent event) {
+    public void handlePaymentFailed(PaymentFailEvent event) {
         log.info("Payment failed for order: {}", event.orderId());
         Order order = orderRepository.findById(event.orderId())
                 .orElseThrow(() -> new IllegalStateException("Order not found: " + event.orderId()));
@@ -85,7 +85,7 @@ public class OrderEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handleRefundFailed(RefundFailedEvent event) {
+    public void handleRefundFailed(RefundFailEvent event) {
         log.error("Refund failed for order: {}", event.orderId());
         Order order = orderRepository.findById(event.orderId())
                 .orElseThrow(() -> new IllegalStateException("Order not found: " + event.orderId()));
