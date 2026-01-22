@@ -1,6 +1,5 @@
 package com.groom.e_commerce.payment.event.model;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record PaymentFailedEvent(
@@ -8,10 +7,9 @@ public record PaymentFailedEvent(
 	String paymentKey,
 	Long amount,
 	String failCode,
-	String failMessage,
-	LocalDateTime occurredAt
+	String failMessage
 ) {
 	public static PaymentFailedEvent of(UUID orderId, String paymentKey, Long amount, String failCode, String failMessage) {
-		return new PaymentFailedEvent(orderId, paymentKey, amount, failCode, failMessage, LocalDateTime.now());
+		return new PaymentFailedEvent(orderId, paymentKey, amount, failCode, failMessage);
 	}
 }
