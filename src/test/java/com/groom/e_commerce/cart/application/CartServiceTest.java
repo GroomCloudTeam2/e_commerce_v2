@@ -24,7 +24,7 @@ import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 
 @ExtendWith(MockitoExtension.class)
-class CartServiceTest {
+class  CartServiceTest {
 
     @InjectMocks
     private CartService cartService;

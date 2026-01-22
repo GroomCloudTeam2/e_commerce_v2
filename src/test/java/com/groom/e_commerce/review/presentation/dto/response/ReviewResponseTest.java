@@ -62,7 +62,6 @@ class ReviewResponseTest {
         assertThat(response.getUserId()).isEqualTo(userId);
         assertThat(response.getContent()).isEqualTo("괜찮아요");
         assertThat(response.getCreatedAt()).isEqualTo(createdAt);
-        // ⚠️ 현재 구현 기준: rating이 마지막에 0으로 세팅됨
         assertThat(response.getRating()).isEqualTo(0);
     }
 }

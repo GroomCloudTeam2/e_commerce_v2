@@ -4,10 +4,10 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import com.groom.e_commerce.global.infrastructure.client.OpenAi.dto.Message;
 
 import com.groom.e_commerce.global.infrastructure.client.OpenAi.dto.ChatCompletionRequest;
 import com.groom.e_commerce.global.infrastructure.client.OpenAi.dto.ChatCompletionResponse;
+import com.groom.e_commerce.global.infrastructure.client.OpenAi.dto.Message;
 
 @Component
 public class OpenAiClient {
