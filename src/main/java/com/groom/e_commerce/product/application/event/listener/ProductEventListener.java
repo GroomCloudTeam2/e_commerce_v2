@@ -9,8 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.groom.e_commerce.product.application.dto.StockManagement;
 import com.groom.e_commerce.product.application.event.dto.OrderCancelledEvent;
-import com.groom.e_commerce.product.application.event.dto.PaymentCompletedEvent;
-import com.groom.e_commerce.product.application.event.dto.PaymentFailEvent;
+import com.groom.e_commerce.payment.event.model.PaymentCompletedEvent;
+import com.groom.e_commerce.payment.event.model.PaymentFailEvent;
 import com.groom.e_commerce.product.application.event.dto.StockDeductedEvent;
 import com.groom.e_commerce.product.application.event.dto.StockDeductionFailedEvent;
 import com.groom.e_commerce.product.application.event.publisher.ProductEventPublisher;
@@ -45,18 +45,18 @@ public class ProductEventListener {
 	@EventListener
 	@Transactional
 	public void handlePaymentCompleted(PaymentCompletedEvent event) {
-		log.info("[Product] PaymentCompletedEvent 수신 - orderId: {}", event.getOrderId());
+		log.info("[Product] PaymentCompletedEvent 수신 - orderId: {}", event.orderId());
 
 		// Redis에서 주문-상품 매핑 조회
-		List<StockManagement> stockManagements = stockRedisService.getOrderStockItems(event.getOrderId());
+		List<StockManagement> stockManagements = stockRedisService.getOrderStockItems(event.orderId());
 
 		if (stockManagements.isEmpty()) {
-			log.error("[Product] 주문-상품 매핑을 찾을 수 없음 - orderId: {}", event.getOrderId());
+			log.error("[Product] 주문-상품 매핑을 찾을 수 없음 - orderId: {}", event.orderId());
 			productEventPublisher.publishStockDeductionFailed(
 				StockDeductionFailedEvent.builder()
-					.orderId(event.getOrderId())
+					.orderId(event.orderId())
 					.failReason("주문-상품 매핑을 찾을 수 없습니다.")
-					// .failedItems(List.of())
+					.failedItems(List.of())
 					.build()
 			);
 			return;
@@ -78,15 +78,15 @@ public class ProductEventListener {
 
 			productEventPublisher.publishStockDeducted(
 				StockDeductedEvent.builder()
-					.orderId(event.getOrderId())
+					.orderId(event.orderId())
 					.items(deductedItems)
 					.build()
 			);
 
-			log.info("[Product] 재고 확정 차감 완료 - orderId: {}", event.getOrderId());
+			log.info("[Product] 재고 확정 차감 완료 - orderId: {}", event.orderId());
 
 		} catch (Exception e) {
-			log.error("[Product] 재고 확정 차감 실패 - orderId: {}, error: {}", event.getOrderId(), e.getMessage());
+			log.error("[Product] 재고 확정 차감 실패 - orderId: {}, error: {}", event.orderId(), e.getMessage());
 
 			// 실패 이벤트 발행
 			List<StockDeductionFailedEvent.FailedItem> failedItems = stockManagements.stream()
@@ -100,7 +100,7 @@ public class ProductEventListener {
 
 			productEventPublisher.publishStockDeductionFailed(
 				StockDeductionFailedEvent.builder()
-					.orderId(event.getOrderId())
+					.orderId(event.orderId())
 					.failReason(e.getMessage())
 					.failedItems(failedItems)
 					.build()
@@ -116,14 +116,14 @@ public class ProductEventListener {
 	@EventListener
 	@Transactional
 	public void handlePaymentFail(PaymentFailEvent event) {
-		log.info("[Product] PaymentFailEvent 수신 - orderId: {}, reason: {}",
-			event.getOrderId(), event.getFailReason());
+		log.info("[Product] PaymentFailEvent 수신 - orderId: {}, failCode: {}, failMessage: {}",
+			event.orderId(), event.failCode(), event.failMessage());
 
 		// Redis에서 주문-상품 매핑 조회
-		List<StockManagement> stockManagements = stockRedisService.getOrderStockItems(event.getOrderId());
+		List<StockManagement> stockManagements = stockRedisService.getOrderStockItems(event.orderId());
 
 		if (stockManagements.isEmpty()) {
-			log.warn("[Product] 주문-상품 매핑을 찾을 수 없음 - orderId: {}", event.getOrderId());
+			log.warn("[Product] 주문-상품 매핑을 찾을 수 없음 - orderId: {}", event.orderId());
 			return;
 		}
 
@@ -132,12 +132,12 @@ public class ProductEventListener {
 			productServiceV1.releaseStockBulk(stockManagements);
 
 			// 매핑 삭제
-			stockRedisService.deleteOrderStockItems(event.getOrderId());
+			stockRedisService.deleteOrderStockItems(event.orderId());
 
-			log.info("[Product] 가점유 재고 복구 완료 - orderId: {}", event.getOrderId());
+			log.info("[Product] 가점유 재고 복구 완료 - orderId: {}", event.orderId());
 
 		} catch (Exception e) {
-			log.error("[Product] 가점유 재고 복구 실패 - orderId: {}, error: {}", event.getOrderId(), e.getMessage());
+			log.error("[Product] 가점유 재고 복구 실패 - orderId: {}, error: {}", event.orderId(), e.getMessage());
 		}
 	}
 
