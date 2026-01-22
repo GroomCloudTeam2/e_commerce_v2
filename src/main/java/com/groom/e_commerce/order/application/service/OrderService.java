@@ -13,11 +13,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.groom.e_commerce.order.domain.entity.Order;
+import com.groom.e_commerce.order.domain.entity.OrderItem;
 import com.groom.e_commerce.order.domain.event.outbound.OrderCreatedEvent;
 import com.groom.e_commerce.order.domain.repository.OrderRepository;
 import com.groom.e_commerce.order.infrastructure.client.ProductClient;
 import com.groom.e_commerce.order.infrastructure.client.UserClient;
-import com.groom.e_commerce.order.domain.entity.OrderItem;
+import com.groom.e_commerce.order.infrastructure.client.dto.StockReserveItem;
+import com.groom.e_commerce.order.infrastructure.client.dto.StockReserveRequest;
 import com.groom.e_commerce.order.infrastructure.client.dto.UserAddressResponse;
 import com.groom.e_commerce.order.presentation.dto.request.OrderCreateRequest;
 import com.groom.e_commerce.order.presentation.dto.response.OrderResponse;
@@ -47,7 +49,7 @@ public class OrderService {
         // 2. 주소 정보 조회 (Snapshot용)
         UserAddressResponse address = userClient.getUserAddress(userId, userId);
 
-        // 3. Order 엔티티 생성 (Transient)
+        // 3. Order 엔티티 생성 (DB 저장 전)
         Order order = Order.builder()
                 .buyerId(userId)
                 .orderNumber(generateOrderNumber())
@@ -58,8 +60,18 @@ public class OrderService {
                 .shippingAddress(address.getAddress() + " " + address.getDetailAddress())
                 .shippingMemo("부재 시 문 앞에 놓아주세요") // TODO: Request에서 받거나 기본값
                 .build();
+        UUID orderId = order.getOrderId(); // 미리 ID 생성
 
-        // 4. OrderItem 생성 및 추가
+        // 4. 재고 가점유 요청 (Bulk)
+        List<StockReserveItem> stockItems = request.getItems().stream()
+                .map(item -> new StockReserveItem(
+                        item.getProductId(),
+                        item.getVariantId(),
+                        item.getQuantity()))
+                .toList();
+        productClient.reserveStock(new StockReserveRequest(orderId, stockItems));
+
+        // 5. OrderItem 생성 및 추가
         for (var itemRequest : request.getItems()) {
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
@@ -72,21 +84,13 @@ public class OrderService {
                     .unitPrice(itemRequest.getUnitPrice())
                     .quantity(itemRequest.getQuantity())
                     .build();
-
             order.addItem(orderItem);
-
-            // 재고 가점유 요청
-            productClient.reserveStock(new com.groom.e_commerce.order.infrastructure.client.dto.StockReserveRequest(
-                    itemRequest.getProductId(),
-                    itemRequest.getVariantId(),
-                    itemRequest.getQuantity()));
         }
 
-        // 5. DB 저장
-        Order savedOrder = orderRepository.save(order);
-        UUID orderId = savedOrder.getOrderId();
+        // 6. DB 저장
+        orderRepository.save(order);
 
-        // 6. 결제 요청 이벤트 발행
+        // 7. 결제 요청 이벤트 발행
         eventPublisher.publishEvent(new OrderCreatedEvent(orderId, order.getTotalPaymentAmount()));
 
         log.info("주문(ID: {})이 생성되었습니다. 결제 프로세스를 시작합니다.", orderId);
