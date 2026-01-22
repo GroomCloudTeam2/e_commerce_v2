@@ -6,8 +6,8 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.groom.e_commerce.payment.event.model.PaymentCompletedEvent;
-import com.groom.e_commerce.payment.event.model.PaymentFailedEvent;
-import com.groom.e_commerce.payment.event.model.RefundFailedEvent;
+import com.groom.e_commerce.payment.event.model.PaymentFailEvent;
+import com.groom.e_commerce.payment.event.model.RefundFailEvent;
 import com.groom.e_commerce.payment.event.model.RefundSucceededEvent;
 
 import java.util.UUID;
@@ -25,7 +25,7 @@ public class PaymentEventPublisher {
 	}
 
 	public void publishPaymentFailed(UUID orderId, String paymentKey, Long amount, String failCode, String failMessage) {
-		publishAfterCommit(PaymentFailedEvent.of(orderId, paymentKey, amount, failCode, failMessage));
+		publishAfterCommit(PaymentFailEvent.of(orderId, paymentKey, amount, failCode, failMessage));
 	}
 
 	public void publishRefundSucceeded(UUID orderId, String paymentKey, Long cancelAmount) {
@@ -33,7 +33,7 @@ public class PaymentEventPublisher {
 	}
 
 	public void publishRefundFailed(UUID orderId, String paymentKey, Long cancelAmount, String failCode, String failMessage) {
-		publishAfterCommit(RefundFailedEvent.of(orderId, paymentKey, cancelAmount, failCode, failMessage));
+		publishAfterCommit(RefundFailEvent.of(orderId, paymentKey, cancelAmount, failCode, failMessage));
 	}
 
 	private void publishAfterCommit(Object event) {
