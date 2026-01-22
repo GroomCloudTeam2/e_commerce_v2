@@ -1,6 +1,7 @@
 package com.groom.e_commerce.product.presentation.controller;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -14,15 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 import com.groom.e_commerce.product.application.dto.ProductCartInfo;
 import com.groom.e_commerce.product.application.dto.StockManagement;
 import com.groom.e_commerce.product.application.service.ProductServiceV1;
-import com.groom.e_commerce.product.presentation.dto.request.ReqProductBulkInfoDto;
-import com.groom.e_commerce.product.presentation.dto.request.ReqStockOperationDto;
+import com.groom.e_commerce.product.infrastructure.cache.StockRedisService;
 import com.groom.e_commerce.product.presentation.dto.response.ResProductBulkInfoDto;
 import com.groom.e_commerce.product.presentation.dto.response.ResStockAvailabilityDto;
 import com.groom.e_commerce.product.presentation.dto.response.ResStockOperationDto;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,6 +30,9 @@ import lombok.extern.slf4j.Slf4j;
  * MSA 환경에서 다른 서비스(Order, Cart)가 OpenFeign을 통해 호출하는 내부 API
  *
  * 보안: API Gateway에서 내부 서비스 간 통신만 허용하도록 설정 필요
+ *
+ * [Request Body 스펙]
+ * Order/Cart 담당자는 spec 패키지의 RequestSpec 클래스를 참고하여 Request DTO를 정의
  */
 @Slf4j
 @Tag(name = "Product Internal", description = "상품 내부 API (서비스 간 통신용)")
@@ -40,32 +42,47 @@ import lombok.extern.slf4j.Slf4j;
 public class ProductInternalController {
 
 	private final ProductServiceV1 productService;
+	private final StockRedisService stockRedisService;
 
 	// ==================== 재고 관리 API ====================
 
 	/**
 	 * 재고 가점유 (Reserve)
 	 * - 호출 시점: 주문서 생성 시 (Order 서비스)
-	 * - 동작: Redis에서 원자적으로 재고 검증 + 차감
+	 * - 동작: Redis에서 원자적으로 재고 검증 + 차감 + 주문-상품 매핑 저장
+	 *
+	 * Request Body:
+	 * {
+	 *   "orderId": "UUID",
+	 *   "items": [{ "productId": "UUID", "variantId": "UUID (optional)", "quantity": int }]
+	 * }
 	 */
 	@Operation(summary = "재고 가점유", description = "주문 생성 시 재고를 가점유합니다. (Redis Lua Script)")
 	@PostMapping("/stock/reserve")
+	@SuppressWarnings("unchecked")
 	public ResponseEntity<ResStockOperationDto> reserveStock(
-		@Valid @RequestBody ReqStockOperationDto request
+		@RequestBody Map<String, Object> request
 	) {
-		log.info("[Internal API] 재고 가점유 요청 - items: {}", request.getItems().size());
+		UUID orderId = UUID.fromString((String) request.get("orderId"));
+		List<Map<String, Object>> items = (List<Map<String, Object>>) request.get("items");
 
-		List<StockManagement> stockManagements = request.getItems().stream()
+		log.info("[Internal API] 재고 가점유 요청 - orderId: {}, items: {}", orderId, items.size());
+
+		List<StockManagement> stockManagements = items.stream()
 			.map(item -> StockManagement.of(
-				item.getProductId(),
-				item.getVariantId(),
-				item.getQuantity()
+				UUID.fromString((String) item.get("productId")),
+				item.get("variantId") != null ? UUID.fromString((String) item.get("variantId")) : null,
+				((Number) item.get("quantity")).intValue()
 			))
 			.toList();
 
+		// 1. 재고 가점유
 		productService.reserveStockBulk(stockManagements);
 
-		log.info("[Internal API] 재고 가점유 완료");
+		// 2. 주문-상품 매핑 저장 (이벤트 수신 시 사용)
+		stockRedisService.saveOrderStockItems(orderId, stockManagements);
+
+		log.info("[Internal API] 재고 가점유 완료 - orderId: {}", orderId);
 		return ResponseEntity.ok(ResStockOperationDto.success("재고 가점유가 완료되었습니다."));
 	}
 
@@ -102,19 +119,27 @@ public class ProductInternalController {
 	 * 상품 정보 벌크 조회
 	 * - 호출 시점: 주문 생성, 장바구니 조회 시 (Order/Cart 서비스)
 	 * - 동작: N+1 방지를 위한 벌크 조회
+	 *
+	 * Request Body:
+	 * {
+	 *   "items": [{ "productId": "UUID", "variantId": "UUID (optional)", "quantity": int }]
+	 * }
 	 */
 	@Operation(summary = "상품 정보 벌크 조회", description = "여러 상품 정보를 한 번에 조회합니다. (N+1 방지)")
 	@PostMapping("/bulk-info")
+	@SuppressWarnings("unchecked")
 	public ResponseEntity<ResProductBulkInfoDto> getProductBulkInfo(
-		@Valid @RequestBody ReqProductBulkInfoDto request
+		@RequestBody Map<String, Object> request
 	) {
-		log.info("[Internal API] 상품 정보 벌크 조회 요청 - items: {}", request.getItems().size());
+		List<Map<String, Object>> items = (List<Map<String, Object>>) request.get("items");
 
-		List<StockManagement> stockManagements = request.getItems().stream()
+		log.info("[Internal API] 상품 정보 벌크 조회 요청 - items: {}", items.size());
+
+		List<StockManagement> stockManagements = items.stream()
 			.map(item -> StockManagement.of(
-				item.getProductId(),
-				item.getVariantId(),
-				item.getQuantity()
+				UUID.fromString((String) item.get("productId")),
+				item.get("variantId") != null ? UUID.fromString((String) item.get("variantId")) : null,
+				item.get("quantity") != null ? ((Number) item.get("quantity")).intValue() : 0
 			))
 			.toList();
 
