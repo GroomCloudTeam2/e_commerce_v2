@@ -1,12 +1,13 @@
 package com.groom.e_commerce.cart.application;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,65 +15,218 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.groom.e_commerce.cart.application.dto.ProductCartInfo;
+import com.groom.e_commerce.cart.domain.model.CartItem;
 import com.groom.e_commerce.cart.domain.repository.CartRepository;
 import com.groom.e_commerce.cart.infrastructure.feign.ProductClient;
 import com.groom.e_commerce.cart.presentation.dto.request.CartAddRequest;
+import com.groom.e_commerce.cart.presentation.dto.response.CartItemResponse;
 import com.groom.e_commerce.global.presentation.advice.CustomException;
+import com.groom.e_commerce.global.presentation.advice.ErrorCode;
 
 @ExtendWith(MockitoExtension.class)
-class CartServiceTest {
-
-    @Mock
-    CartRepository cartRepository;
-
-    @Mock
-    ProductClient productClient;
+class  CartServiceTest {
 
     @InjectMocks
-    CartService cartService;
+    private CartService cartService;
+
+    @Mock
+    private CartRepository cartRepository;
+
+    @Mock
+    private ProductClient productClient;
+
+    private UUID userId;
+    private UUID productId;
+    private UUID variantId;
+
+    @BeforeEach
+    void setUp() {
+        userId = UUID.randomUUID();
+        productId = UUID.randomUUID();
+        variantId = UUID.randomUUID();
+    }
+
+    // =========================
+    // addItemToCart
+    // =========================
 
     @Test
-    void 장바구니_상품_추가_성공() {
-        // given
-        UUID userId = UUID.randomUUID();
-        UUID productId = UUID.randomUUID();
-        UUID variantId = UUID.randomUUID();
-
+    void addItemToCart_success() {
         CartAddRequest request = new CartAddRequest(productId, variantId, 2);
 
-        ProductCartInfo productInfo = mock(ProductCartInfo.class);
-        given(productInfo.isAvailable()).willReturn(true);
-        given(productInfo.getStockQuantity()).willReturn(10);
+        ProductCartInfo product = mock(ProductCartInfo.class);
+        when(product.isAvailable()).thenReturn(true);
+        when(product.getStockQuantity()).thenReturn(10);
 
-        given(productClient.getProductCartInfos(any()))
-            .willReturn(List.of(productInfo));
+        when(productClient.getProductCartInfos(any()))
+            .thenReturn(List.of(product));
 
-        given(cartRepository.findItem(userId, productId, variantId))
-            .willReturn(Optional.empty());
+        when(cartRepository.findItem(userId, productId, variantId))
+            .thenReturn(Optional.empty());
 
-        // when
         cartService.addItemToCart(userId, request);
 
-        // then
         verify(cartRepository).addItem(userId, productId, variantId, 2);
     }
 
     @Test
-    void 재고_부족하면_예외() {
-        UUID userId = UUID.randomUUID();
-        UUID productId = UUID.randomUUID();
-        UUID variantId = UUID.randomUUID();
+    void addItemToCart_productNotFound() {
+        CartAddRequest request = new CartAddRequest(productId, variantId, 1);
 
+        when(productClient.getProductCartInfos(any()))
+            .thenReturn(List.of());
+
+        assertThatThrownBy(() ->
+            cartService.addItemToCart(userId, request)
+        )
+            .isInstanceOf(CustomException.class)
+            .satisfies(ex ->
+                assertThat(((CustomException) ex).getErrorCode())
+                    .isEqualTo(ErrorCode.PRODUCT_NOT_FOUND)
+            );
+    }
+
+    @Test
+    void addItemToCart_notOnSale() {
+        CartAddRequest request = new CartAddRequest(productId, variantId, 1);
+
+        ProductCartInfo product = mock(ProductCartInfo.class);
+        when(product.isAvailable()).thenReturn(false);
+
+        when(productClient.getProductCartInfos(any()))
+            .thenReturn(List.of(product));
+
+        assertThatThrownBy(() ->
+            cartService.addItemToCart(userId, request)
+        )
+            .isInstanceOf(CustomException.class)
+            .satisfies(ex ->
+                assertThat(((CustomException) ex).getErrorCode())
+                    .isEqualTo(ErrorCode.PRODUCT_NOT_ON_SALE)
+            );
+    }
+
+    @Test
+    void addItemToCart_stockNotEnough() {
         CartAddRequest request = new CartAddRequest(productId, variantId, 5);
 
-        ProductCartInfo productInfo = mock(ProductCartInfo.class);
-        given(productInfo.isAvailable()).willReturn(true);
-        given(productInfo.getStockQuantity()).willReturn(3);
+        ProductCartInfo product = mock(ProductCartInfo.class);
+        when(product.isAvailable()).thenReturn(true);
+        when(product.getStockQuantity()).thenReturn(3);
 
-        given(productClient.getProductCartInfos(any()))
-            .willReturn(List.of(productInfo));
+        when(productClient.getProductCartInfos(any()))
+            .thenReturn(List.of(product));
 
-        assertThrows(CustomException.class,
-            () -> cartService.addItemToCart(userId, request));
+        when(cartRepository.findItem(userId, productId, variantId))
+            .thenReturn(Optional.of(new CartItem(productId, variantId, 1)));
+
+        assertThatThrownBy(() ->
+            cartService.addItemToCart(userId, request)
+        )
+            .isInstanceOf(CustomException.class)
+            .satisfies(ex ->
+                assertThat(((CustomException) ex).getErrorCode())
+                    .isEqualTo(ErrorCode.STOCK_NOT_ENOUGH)
+            );
+    }
+
+
+    // =========================
+    // getMyCart
+    // =========================
+
+    @Test
+    void getMyCart_empty() {
+        when(cartRepository.findAll(userId))
+            .thenReturn(List.of());
+
+        List<CartItemResponse> result = cartService.getMyCart(userId);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getMyCart_success() {
+        CartItem item = new CartItem(productId, variantId, 2);
+
+        when(cartRepository.findAll(userId))
+            .thenReturn(List.of(item));
+
+        ProductCartInfo info = mock(ProductCartInfo.class);
+        when(info.getProductId()).thenReturn(productId);
+        when(info.getVariantId()).thenReturn(variantId);
+        when(info.getProductName()).thenReturn("상품");
+        when(info.getOptionName()).thenReturn("옵션");
+        when(info.getThumbnailUrl()).thenReturn("url");
+        when(info.getPrice()).thenReturn(1000);
+        when(info.getStockQuantity()).thenReturn(10);
+        when(info.isAvailable()).thenReturn(true);
+
+        when(productClient.getProductCartInfos(any()))
+            .thenReturn(List.of(info));
+
+        List<CartItemResponse> result = cartService.getMyCart(userId);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getTotalPrice()).isEqualTo(2000);
+    }
+
+    // =========================
+    // updateItemQuantity
+    // =========================
+
+    @Test
+    void updateItemQuantity_success() {
+        CartItem item = new CartItem(productId, variantId, 1);
+
+        when(cartRepository.findItem(userId, productId, variantId))
+            .thenReturn(Optional.of(item));
+
+        ProductCartInfo product = mock(ProductCartInfo.class);
+        when(product.isAvailable()).thenReturn(true);
+        when(product.getStockQuantity()).thenReturn(10);
+
+        when(productClient.getProductCartInfos(any()))
+            .thenReturn(List.of(product));
+
+        cartService.updateItemQuantity(userId, productId, variantId, 3);
+
+        verify(cartRepository)
+            .updateQuantity(userId, productId, variantId, 3);
+    }
+    @Test
+    void updateItemQuantity_cartItemNotFound() {
+        when(cartRepository.findItem(any(), any(), any()))
+            .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+            cartService.updateItemQuantity(userId, productId, variantId, 1)
+        )
+            .isInstanceOf(CustomException.class)
+            .satisfies(ex ->
+                assertThat(((CustomException) ex).getErrorCode())
+                    .isEqualTo(ErrorCode.CART_ITEM_NOT_FOUND)
+            );
+    }
+
+
+    // =========================
+    // delete / clear
+    // =========================
+
+    @Test
+    void deleteCartItem_success() {
+        when(cartRepository.findItem(userId, productId, variantId))
+            .thenReturn(Optional.of(new CartItem(productId, variantId, 1)));
+
+        cartService.deleteCartItem(userId, productId, variantId);
+
+        verify(cartRepository).removeItem(userId, productId, variantId);
+    }
+
+    @Test
+    void clearCart_success() {
+        cartService.clearCart(userId);
+        verify(cartRepository).clear(userId);
     }
 }

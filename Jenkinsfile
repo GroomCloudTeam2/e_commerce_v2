@@ -10,8 +10,8 @@ pipeline {
         IMAGE_TAG  = "${BUILD_NUMBER}"
 
         // ===== SonarCloud =====
-        SONAR_PROJECT_KEY = "groom"
-        SONAR_ORG = "boxty"
+        SONAR_PROJECT_KEY = "GroomCloudTeam2_e_commerce_v2"
+        SONAR_ORG = "groomcloudteam2"
         SONAR_HOST_URL = "https://sonarcloud.io"
     }
 
@@ -20,6 +20,14 @@ pipeline {
     }
 
     stages {
+        stage('Check Java Version') {
+            steps {
+                sh '''
+                  java -version
+                  ./gradlew -version
+                '''
+            }
+        }
 
         stage('Checkout') {
             steps {
@@ -28,11 +36,14 @@ pipeline {
         }
 
         /* =========================
-         * 1️⃣ Test + Coverage
+         * 1️⃣ Unit & Slice Tests ONLY
          * ========================= */
-        stage('Test & Coverage') {
+
+        stage('Test') {
             steps {
-                sh './gradlew clean test jacocoTestReport'
+                sh '''
+                  ./gradlew clean test jacocoTestReport
+                '''
             }
             post {
                 always {
@@ -42,24 +53,28 @@ pipeline {
             }
         }
 
+
         /* =========================
-         * 2️⃣ SonarCloud Analysis (with Coverage)
+         * 2️⃣ SonarCloud Analysis
          * ========================= */
         stage('SonarCloud Analysis') {
             environment {
                 SONAR_TOKEN = credentials('sonarcloud-token')
             }
             steps {
-                sh '''
-                    ./gradlew sonar \
-                      -Dsonar.projectKey=$SONAR_PROJECT_KEY \
-                      -Dsonar.organization=$SONAR_ORG \
-                      -Dsonar.host.url=$SONAR_HOST_URL \
-                      -Dsonar.token=$SONAR_TOKEN \
-                      -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/jacoco/test/jacocoTestReport.xml
-                '''
+                withSonarQubeEnv('sonarcloud') {
+                    sh '''
+                      ./gradlew sonarqube \
+                        -Dsonar.projectKey=$SONAR_PROJECT_KEY \
+                        -Dsonar.organization=$SONAR_ORG \
+                        -Dsonar.host.url=$SONAR_HOST_URL \
+                        -Dsonar.token=$SONAR_TOKEN \
+                        -Dsonar.coverage.jacoco.xmlReportPaths=build/reports/jacoco/test/jacocoTestReport.xml
+                    '''
+                }
             }
         }
+
 
         /* =========================
          * 3️⃣ Quality Gate

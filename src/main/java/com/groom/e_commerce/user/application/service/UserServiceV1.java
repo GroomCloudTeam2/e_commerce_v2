@@ -13,6 +13,7 @@ import org.springframework.util.StringUtils;
 
 import com.groom.e_commerce.global.presentation.advice.CustomException;
 import com.groom.e_commerce.global.presentation.advice.ErrorCode;
+import com.groom.e_commerce.global.util.SecurityUtil;
 import com.groom.e_commerce.user.domain.entity.address.AddressEntity;
 import com.groom.e_commerce.user.domain.entity.owner.OwnerEntity;
 import com.groom.e_commerce.user.domain.entity.user.PeriodType;
@@ -42,7 +43,9 @@ public class UserServiceV1 {
 	private final OwnerRepository ownerRepository;
 	private final ApplicationEventPublisher eventPublisher;
 
-	public ResUserDtoV1 getMe(UUID userId) {
+	public ResUserDtoV1 getMe() {
+		UUID userId = SecurityUtil.getCurrentUserId();
+
 		// -- 기본 배송지 조회 --
 		UserEntity user = findUserById(userId);
 
@@ -61,7 +64,8 @@ public class UserServiceV1 {
 	}
 
 	@Transactional
-	public void updateMe(UUID userId, ReqUpdateUserDtoV1 request) {
+	public void updateMe(ReqUpdateUserDtoV1 request) {
+		UUID userId = SecurityUtil.getCurrentUserId();
 		UserEntity user = findUserById(userId);
 
 		String newNickname = null;
@@ -98,7 +102,8 @@ public class UserServiceV1 {
 	}
 
 	@Transactional
-	public void deleteMe(UUID userId) {
+	public void deleteMe() {
+		UUID userId = SecurityUtil.getCurrentUserId();
 		UserEntity user = findUserById(userId);
 
 		if (user.isWithdrawn()) {
@@ -112,7 +117,8 @@ public class UserServiceV1 {
 		log.info("User withdrew: {}", userId);
 	}
 
-	public List<ResSalesStatDtoV1> getSalesStats(UUID userId, PeriodType periodType, LocalDate date) {
+	public List<ResSalesStatDtoV1> getSalesStats(PeriodType periodType, LocalDate date) {
+		UUID userId = SecurityUtil.getCurrentUserId();
 		UserEntity user = findUserById(userId);
 
 		if (user.getRole() != UserRole.OWNER) {

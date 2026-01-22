@@ -1,6 +1,5 @@
 package com.groom.e_commerce.product.presentation.dto.response;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 import com.groom.e_commerce.product.domain.entity.Product;

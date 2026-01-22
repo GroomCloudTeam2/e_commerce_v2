@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -18,8 +17,81 @@ import org.springframework.web.bind.annotation.RestController;
 import com.groom.e_commerce.cart.application.CartService;
 import com.groom.e_commerce.cart.presentation.dto.request.CartAddRequest;
 import com.groom.e_commerce.cart.presentation.dto.response.CartItemResponse;
+import com.groom.e_commerce.global.util.SecurityUtil;
 
 import lombok.RequiredArgsConstructor;
+//
+// @RestController
+// @RequestMapping("/api/v1/cart")
+// @RequiredArgsConstructor
+// public class CartController {
+//
+//     private final CartService cartService;
+//
+//     /**
+//      * 장바구니 담기
+//      */
+//     @PostMapping
+//     @ResponseStatus(HttpStatus.CREATED)
+//     public void addItem(
+//         @RequestHeader("X-USER-ID") UUID userId,
+//         @RequestBody CartAddRequest request
+//     ) {
+//         cartService.addItemToCart(userId, request);
+//     }
+//
+//     /**
+//      * 내 장바구니 조회
+//      */
+//     @GetMapping
+//     public List<CartItemResponse> getMyCart(
+//         @RequestHeader("X-USER-ID") UUID userId
+//     ) {
+//         return cartService.getMyCart(userId);
+//     }
+//
+//     /**
+//      * 수량 변경
+//      */
+//     @PutMapping("/items")
+//     @ResponseStatus(HttpStatus.NO_CONTENT)
+//     public void updateQuantity(
+//         @RequestHeader("X-USER-ID") UUID userId,
+//         @RequestParam UUID productId,
+//         @RequestParam UUID variantId,
+//         @RequestParam int quantity
+//     ) {
+//         cartService.updateItemQuantity(userId, productId, variantId, quantity);
+//     }
+//
+//     /**
+//      * 단일 아이템 삭제
+//      */
+//     @DeleteMapping("/items")
+//     @ResponseStatus(HttpStatus.NO_CONTENT)
+//     public void deleteItem(
+//         @RequestHeader("X-USER-ID") UUID userId,
+//         @RequestParam UUID productId,
+//         @RequestParam UUID variantId
+//     ) {
+//         cartService.deleteCartItem(userId, productId, variantId);
+//     }
+//
+//     /**
+//      * 여러개 골라서 삭제
+//      */
+//
+//     @DeleteMapping("/items/bulk")
+//     @ResponseStatus(HttpStatus.NO_CONTENT)
+//     public void removeItems(
+//         @RequestHeader("X-USER-ID") UUID userId,
+//         @RequestBody List<CartService.CartItemDeleteRequest> items
+//     ) {
+//         cartService.removeCartItems(userId, items);
+//     }
+//
+// }
+
 
 @RestController
 @RequestMapping("/api/v1/cart")
@@ -33,21 +105,21 @@ public class CartController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void addItem(
-        @RequestHeader("X-USER-ID") UUID userId,
-        @RequestBody CartAddRequest request
-    ) {
-        cartService.addItemToCart(userId, request);
+    public void addItem(@RequestBody CartAddRequest request) {
+        cartService.addItemToCart(
+            SecurityUtil.getCurrentUserId(),
+            request
+        );
     }
 
     /**
      * 내 장바구니 조회
      */
     @GetMapping
-    public List<CartItemResponse> getMyCart(
-        @RequestHeader("X-USER-ID") UUID userId
-    ) {
-        return cartService.getMyCart(userId);
+    public List<CartItemResponse> getMyCart() {
+        return cartService.getMyCart(
+            SecurityUtil.getCurrentUserId()
+        );
     }
 
     /**
@@ -56,12 +128,16 @@ public class CartController {
     @PutMapping("/items")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateQuantity(
-        @RequestHeader("X-USER-ID") UUID userId,
         @RequestParam UUID productId,
         @RequestParam UUID variantId,
         @RequestParam int quantity
     ) {
-        cartService.updateItemQuantity(userId, productId, variantId, quantity);
+        cartService.updateItemQuantity(
+            SecurityUtil.getCurrentUserId(),
+            productId,
+            variantId,
+            quantity
+        );
     }
 
     /**
@@ -70,24 +146,27 @@ public class CartController {
     @DeleteMapping("/items")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteItem(
-        @RequestHeader("X-USER-ID") UUID userId,
         @RequestParam UUID productId,
         @RequestParam UUID variantId
     ) {
-        cartService.deleteCartItem(userId, productId, variantId);
+        cartService.deleteCartItem(
+            SecurityUtil.getCurrentUserId(),
+            productId,
+            variantId
+        );
     }
 
     /**
-     * 여러개 골라서 삭제
+     * 여러 개 선택 삭제
      */
-
     @DeleteMapping("/items/bulk")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeItems(
-        @RequestHeader("X-USER-ID") UUID userId,
         @RequestBody List<CartService.CartItemDeleteRequest> items
     ) {
-        cartService.removeCartItems(userId, items);
+        cartService.removeCartItems(
+            SecurityUtil.getCurrentUserId(),
+            items
+        );
     }
-
 }

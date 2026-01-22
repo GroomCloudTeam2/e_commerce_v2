@@ -2,6 +2,9 @@ spring:
   application:
     name: e_commerce
 
+  main:
+    allow-bean-definition-overriding: true
+
   data:
     redis:
       host: localhost
@@ -22,6 +25,9 @@ spring:
     hikari:
       maximum-pool-size: 50
 
+  # ----------------------------
+  # JPA (개발용)
+  # ----------------------------
   jpa:
     hibernate:
       ddl-auto: update
@@ -30,13 +36,8 @@ spring:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 100
-        # 👇 (선택) PostgreSQL 전용 방언 설정 (없어도 되지만 넣으면 더 안정적)
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  security:
-    user:
-      name: user
-      password: 1234
 
   cloud:
     openfeign:
@@ -52,6 +53,8 @@ external:
   product-service:
     url: http://localhost:8080
   order-service:
+    url: http://localhost:8080
+  ai-classification:
     url: http://localhost:8080
 
 jwt:
@@ -69,15 +72,14 @@ ai:
 
 logging:
   level:
-    root: INFO
-    com.groom.e_commerce: INFO
-    org.hibernate.SQL: WARN
-    org.hibernate.orm.jdbc.bind: WARN
+    root: ERROR
+    com.groom.e_commerce: DEBUG
+    org.hibernate.SQL: DEBUG
 
 toss:
   payments:
     base-url: https://api.tosspayments.com
-    secret-key: ${TOSS_PAYMENTS_SECRET_KEY:}
+    secret-key: ${TOSS_PAYMENTS_SECRET_KEY:dummy}
     client-key: test_ck_AQ92ymxN349xlKM196KKVajRKXvd
     success-url: http://localhost:8080/pay-success.html
     fail-url: http://localhost:8080/pay-fail.html
