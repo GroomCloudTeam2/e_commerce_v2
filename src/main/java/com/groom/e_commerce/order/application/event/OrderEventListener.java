@@ -47,7 +47,7 @@ public class OrderEventListener {
         order.complete();
         orderRepository.save(order);
 
-        eventPublisher.publishEvent(new OrderConfirmedEvent(order.getUserId(), order.getOrderId()));
+        eventPublisher.publishEvent(new OrderConfirmedEvent(order.getBuyerId(), order.getOrderId()));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
