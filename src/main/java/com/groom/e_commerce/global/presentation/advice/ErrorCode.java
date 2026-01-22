@@ -90,7 +90,14 @@ public enum ErrorCode {
 	),
     PRODUCT_SERVICE_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "PRODUCT_SERVICE_ERROR", "상품 서비스 응답 오류"),
 
-    // =====================
+	// =====================
+	// Payment - Ready / Checkout
+	// =====================
+	PAYMENT_NOT_READY(HttpStatus.CONFLICT, "PAYMENT_NOT_READY", "결제창을 열 수 없는 상태입니다."),
+	PAYMENT_CONFIG_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_CONFIG_ERROR", "결제 설정 정보가 올바르지 않습니다."),
+
+
+	// =====================
     // Payment - 기본 상태
     // =====================
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "PAYMENT_NOT_FOUND", "결제 정보를 찾을 수 없습니다."),
