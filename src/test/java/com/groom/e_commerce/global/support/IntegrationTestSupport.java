@@ -1,5 +1,6 @@
 package com.groom.e_commerce.global.support;
 
+import org.junit.jupiter.api.Tag;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -13,6 +14,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 	"spring.jpa.hibernate.ddl-auto=create-drop",
 	"spring.datasource.url=jdbc:postgresql://localhost:5432/test_db" // DynamicPropertySource가 덮어쓸 더미 값
 })
+@Tag("integration")
 @Testcontainers
 public abstract class IntegrationTestSupport {
 

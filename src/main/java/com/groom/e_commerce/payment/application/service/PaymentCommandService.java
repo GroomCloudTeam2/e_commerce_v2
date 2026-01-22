@@ -15,7 +15,6 @@ import com.groom.e_commerce.payment.domain.model.PaymentStatus;
 import com.groom.e_commerce.payment.domain.repository.PaymentCancelRepository;
 import com.groom.e_commerce.payment.domain.repository.PaymentRepository;
 import com.groom.e_commerce.payment.event.publisher.PaymentEventPublisher;
-import com.groom.e_commerce.payment.infrastructure.feign.OrderClient;
 import com.groom.e_commerce.payment.infrastructure.feign.TossPaymentsClient;
 import com.groom.e_commerce.payment.infrastructure.feign.TossPaymentsClient.TossCancelRequest;
 import com.groom.e_commerce.payment.infrastructure.feign.TossPaymentsClient.TossCancelResponse;

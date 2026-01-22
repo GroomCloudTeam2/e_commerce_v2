@@ -6,11 +6,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Repository;
+
+import lombok.RequiredArgsConstructor;
 
 @Repository
 @RequiredArgsConstructor

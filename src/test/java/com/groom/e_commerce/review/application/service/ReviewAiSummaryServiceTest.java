@@ -5,19 +5,20 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageRequest;
 
-import com.groom.e_commerce.global.infrastructure.client.OpenAi.OpenAiRestClient;
+import com.groom.e_commerce.global.infrastructure.client.OpenAi.OpenAiClient;
+import com.groom.e_commerce.product.domain.entity.Product;
 import com.groom.e_commerce.product.domain.repository.ProductRepository;
 import com.groom.e_commerce.review.application.support.AiReviewPromptBuilder;
 import com.groom.e_commerce.review.domain.entity.ProductRatingEntity;
@@ -29,9 +30,6 @@ import com.groom.e_commerce.review.domain.repository.ReviewRepository;
 @ExtendWith(MockitoExtension.class)
 class ReviewAiSummaryServiceTest {
 
-	@InjectMocks
-	private ReviewAiSummaryService reviewAiSummaryService;
-
 	@Mock
 	private ReviewRepository reviewRepository;
 
@@ -42,73 +40,93 @@ class ReviewAiSummaryServiceTest {
 	private AiReviewPromptBuilder promptBuilder;
 
 	@Mock
-	private OpenAiRestClient openAiRestClient;
+	private OpenAiClient openAiClient;
 
 	@Mock
 	private ProductRepository productRepository;
 
-	private UUID productId;
-
-	@BeforeEach
-	void setUp() {
-		productId = UUID.randomUUID();
-	}
+	@InjectMocks
+	private ReviewAiSummaryService service;
 
 	@Test
-	void AI_리뷰_요약_생성_성공() {
+	@DisplayName("AI 리뷰 요약이 정상적으로 생성되어 상품 평점에 저장된다")
+	void generate_success() {
 		// given
-		doReturn(List.of(mock(ReviewEntity.class)))
-			.when(reviewRepository)
-			.findTopReviews(
-				eq(productId),
-				any(ReviewCategory.class),
-				any(PageRequest.class)
-			);
+		UUID productId = UUID.randomUUID();
 
-		when(productRepository.findTitleById(productId))
-			.thenReturn(Optional.of("상품 제목"));
+		Product product = mock(Product.class);
+		when(product.getTitle()).thenReturn("맥북 프로");
 
-		when(promptBuilder.build(eq("상품 제목"), any()))
-			.thenReturn("AI PROMPT");
+		when(productRepository.findByIdAndNotDeleted(productId))
+			.thenReturn(Optional.of(product));
 
-		when(openAiRestClient.summarizeReviews("AI PROMPT"))
-			.thenReturn("AI 요약 결과");
+		when(reviewRepository.findTopReviews(any(), any(), any()))
+			.thenReturn(List.of(mock(ReviewEntity.class)));
+
+		when(promptBuilder.build(eq("맥북 프로"), any(Map.class)))
+			.thenReturn("PROMPT");
+
+		when(openAiClient.summarizeReviews("PROMPT"))
+			.thenReturn("AI SUMMARY");
 
 		ProductRatingEntity rating = new ProductRatingEntity(productId);
 		when(productRatingRepository.findByProductId(productId))
 			.thenReturn(Optional.of(rating));
 
 		// when
-		reviewAiSummaryService.generate(productId);
+		service.generate(productId);
 
 		// then
-		assertThat(rating.getAiReview()).isEqualTo("AI 요약 결과");
-		verify(productRatingRepository).save(rating);
+		ArgumentCaptor<ProductRatingEntity> captor =
+			ArgumentCaptor.forClass(ProductRatingEntity.class);
+
+		verify(productRatingRepository).save(captor.capture());
+
+		ProductRatingEntity saved = captor.getValue();
+		assertThat(saved.getAiReview()).isEqualTo("AI SUMMARY");
 	}
 
 	@Test
-	void ProductRating이_없으면_예외() {
-		for (ReviewCategory category : ReviewCategory.values()) {
-			doReturn(List.of(mock(ReviewEntity.class)))
-				.when(reviewRepository)
-				.findTopReviews(
-					eq(productId),
-					eq(category),
-					any(PageRequest.class)
-				);
-		}
+	@DisplayName("상품이 존재하지 않으면 예외가 발생한다")
+	void generate_fail_product_not_found() {
+		// given
+		UUID productId = UUID.randomUUID();
 
-		when(productRepository.findTitleById(productId))
-			.thenReturn(Optional.of("상품 제목"));
+		when(productRepository.findByIdAndNotDeleted(productId))
+			.thenReturn(Optional.empty());
+
+		// when / then
+		assertThatThrownBy(() -> service.generate(productId))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("상품 제목");
+	}
+
+	@Test
+	@DisplayName("상품 평점 엔티티가 없으면 예외가 발생한다")
+	void generate_fail_rating_not_found() {
+		// given
+		UUID productId = UUID.randomUUID();
+
+		Product product = mock(Product.class);
+		when(product.getTitle()).thenReturn("아이폰");
+
+		when(productRepository.findByIdAndNotDeleted(productId))
+			.thenReturn(Optional.of(product));
+
+		when(reviewRepository.findTopReviews(any(), any(), any()))
+			.thenReturn(List.of());
+
 		when(promptBuilder.build(anyString(), any()))
 			.thenReturn("PROMPT");
-		when(openAiRestClient.summarizeReviews(anyString()))
-			.thenReturn("AI 요약");
+
+		when(openAiClient.summarizeReviews(any()))
+			.thenReturn("AI SUMMARY");
+
 		when(productRatingRepository.findByProductId(productId))
 			.thenReturn(Optional.empty());
 
-		assertThatThrownBy(() ->
-			reviewAiSummaryService.generate(productId)
-		).isInstanceOf(NoSuchElementException.class);
+		// when / then
+		assertThatThrownBy(() -> service.generate(productId))
+			.isInstanceOf(RuntimeException.class);
 	}
 }

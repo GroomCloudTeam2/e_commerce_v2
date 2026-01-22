@@ -77,27 +77,30 @@ public class UserEntity extends BaseEntity {
 	// Update Methods
 	// =========================
 	public void updateNickname(String nickname) {
-		this.nickname = nickname;
+		this.nickname = requireText(nickname, "nickname");
 	}
 
 	public void updatePhoneNumber(String phoneNumber) {
-		this.phoneNumber = phoneNumber;
+		this.phoneNumber = requireText(phoneNumber, "phoneNumber");
 	}
 
 	public void updatePassword(String encodedPassword) {
-		this.password = encodedPassword;
+		this.password = requireText(encodedPassword, "password");
 	}
 
 	// =========================
 	// Status Change
 	// =========================
 	public void withdraw(String deletedBy) {
+		if (this.status == UserStatus.WITHDRAWN) {
+			return; // idempotent
+		}
 		this.status = UserStatus.WITHDRAWN;
 		// BaseEntity의 soft delete 사용
 		super.softDelete(deletedBy);
 	}
 
-	// 기존 시그니처 유지용 (원하면 삭제 가능)
+	// 기존 시그니처 유지용
 	public void withdraw() {
 		withdraw(null);
 	}
@@ -107,6 +110,9 @@ public class UserEntity extends BaseEntity {
 	}
 
 	public void activate() {
+		if (this.status == UserStatus.WITHDRAWN) {
+			throw new IllegalStateException("withdrawn user must use reactivate()");
+		}
 		this.status = UserStatus.ACTIVE;
 	}
 
@@ -125,12 +131,22 @@ public class UserEntity extends BaseEntity {
 	// Reactivate
 	// =========================
 	public void reactivate(String encodedPassword, String nickname, String phoneNumber) {
-		this.password = encodedPassword;
-		this.nickname = nickname;
-		this.phoneNumber = phoneNumber;
+		if (this.status != UserStatus.WITHDRAWN) {
+			throw new IllegalStateException("only withdrawn user can be reactivated");
+		}
+
+		this.password = requireText(encodedPassword, "password");
+		this.nickname = requireText(nickname, "nickname");
+		this.phoneNumber = requireText(phoneNumber, "phoneNumber");
 		this.status = UserStatus.ACTIVE;
 
-		// BaseEntity의 deleted_at/deleted_by는 "복구" 처리 필요 시 여기서 null 처리하는 방식으로 확장 가능
-		// (BaseEntity에 restore 메서드가 없어서, 보통은 BaseEntity에 restore()를 추가해서 처리)
+		// deleted_at/deleted_by 복구가 필요하면 BaseEntity에 restore() 추가 후 여기서 호출하는 방식 추천
+	}
+
+	private static String requireText(String value, String field) {
+		if (value == null || value.trim().isEmpty()) {
+			throw new IllegalArgumentException(field + " must not be blank");
+		}
+		return value.trim();
 	}
 }

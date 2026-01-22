@@ -10,32 +10,23 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
-    /**
-     * 범용 RedisTemplate
-     * - 캐시
-     * - 이벤트 중복 방지
-     * - 임시 데이터
-     */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(
         RedisConnectionFactory factory,
-        StringRedisSerializer stringSerializer,
-        GenericJackson2JsonRedisSerializer jsonSerializer
+        StringRedisSerializer stringRedisSerializer,
+        GenericJackson2JsonRedisSerializer jsonRedisSerializer
     ) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(factory);
 
-        template.setKeySerializer(stringSerializer);
-        template.setHashKeySerializer(stringSerializer);
-        template.setValueSerializer(jsonSerializer);
-        template.setHashValueSerializer(jsonSerializer);
+        template.setKeySerializer(stringRedisSerializer);
+        template.setHashKeySerializer(stringRedisSerializer);
+        template.setValueSerializer(jsonRedisSerializer);
+        template.setHashValueSerializer(jsonRedisSerializer);
 
         return template;
     }
 
-    /**
-     * Pub/Sub, Lock, Counter 전용
-     */
     @Bean
     public StringRedisTemplate stringRedisTemplate(
         RedisConnectionFactory factory
