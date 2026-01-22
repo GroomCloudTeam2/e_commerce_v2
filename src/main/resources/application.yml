@@ -54,6 +54,8 @@ external:
     url: http://localhost:8080
   order-service:
     url: http://localhost:8080
+  user-service:
+    url: http://localhost:8080
   ai-classification:
     url: http://localhost:8080
 

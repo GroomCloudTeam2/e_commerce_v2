@@ -12,11 +12,10 @@ import com.groom.e_commerce.product.application.event.dto.StockDeductionFailedEv
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 @RequiredArgsConstructor
@@ -26,8 +25,9 @@ public class OrderEventListener {
     private final OrderRepository orderRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Async("eventExecutor")
+    @EventListener
+    @Transactional
     public void handlePaymentCompleted(PaymentCompletedEvent event) {
         log.info("Payment completed for order: {}", event.orderId());
         Order order = orderRepository.findById(event.orderId())
@@ -37,8 +37,9 @@ public class OrderEventListener {
         orderRepository.save(order);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Async("eventExecutor")
+    @EventListener
+    @Transactional
     public void handleStockDeducted(StockDeductedEvent event) {
         log.info("Stock deducted for order: {}", event.getOrderId());
         Order order = orderRepository.findById(event.getOrderId())
@@ -50,8 +51,9 @@ public class OrderEventListener {
         eventPublisher.publishEvent(new OrderConfirmedEvent(order.getBuyerId(), order.getOrderId()));
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Async("eventExecutor")
+    @EventListener
+    @Transactional
     public void handlePaymentFailed(PaymentFailEvent event) {
         log.info("Payment failed for order: {}", event.orderId());
         Order order = orderRepository.findById(event.orderId())
@@ -61,8 +63,9 @@ public class OrderEventListener {
         orderRepository.save(order);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Async("eventExecutor")
+    @EventListener
+    @Transactional
     public void handleStockDeductionFailed(StockDeductionFailedEvent event) {
         log.info("Stock deduction failed for order: {}", event.getOrderId());
         Order order = orderRepository.findById(event.getOrderId())
@@ -72,8 +75,9 @@ public class OrderEventListener {
         orderRepository.save(order);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Async("eventExecutor")
+    @EventListener
+    @Transactional
     public void handleRefundSucceeded(RefundSucceededEvent event) {
         log.info("Refund succeeded for order: {}", event.orderId());
         Order order = orderRepository.findById(event.orderId())
@@ -83,8 +87,9 @@ public class OrderEventListener {
         orderRepository.save(order);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Async("eventExecutor")
+    @EventListener
+    @Transactional
     public void handleRefundFailed(RefundFailEvent event) {
         log.error("Refund failed for order: {}", event.orderId());
         Order order = orderRepository.findById(event.orderId())
