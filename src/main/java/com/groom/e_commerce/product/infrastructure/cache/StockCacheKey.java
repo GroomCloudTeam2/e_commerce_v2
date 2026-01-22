@@ -15,6 +15,7 @@ public final class StockCacheKey {
 	private static final String STOCK_PRODUCT_PREFIX = "stock:product:";
 	private static final String STOCK_VARIANT_PREFIX = "stock:variant:";
 	private static final String RESERVATION_PREFIX = "stock:reservation:";
+	private static final String ORDER_STOCK_ITEMS_PREFIX = "order:stock:items:";
 
 	private StockCacheKey() {
 	}
@@ -64,5 +65,12 @@ public final class StockCacheKey {
 	 */
 	public static String allVariantStockPattern() {
 		return STOCK_VARIANT_PREFIX + "*";
+	}
+
+	/**
+	 * 주문-상품 매핑 키 (가점유 시 저장, 이벤트 수신 시 조회)
+	 */
+	public static String orderStockItems(UUID orderId) {
+		return ORDER_STOCK_ITEMS_PREFIX + orderId.toString();
 	}
 }
