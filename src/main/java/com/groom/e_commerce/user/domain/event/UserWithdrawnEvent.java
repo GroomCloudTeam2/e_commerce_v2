@@ -2,5 +2,11 @@ package com.groom.e_commerce.user.domain.event;
 
 import java.util.UUID;
 
-public record UserWithdrawnEvent(UUID userId) {
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor
+public class UserWithdrawnEvent {
+	private final UUID userId;
 }

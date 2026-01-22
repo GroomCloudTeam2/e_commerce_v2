@@ -10,11 +10,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 @Configuration
 public class JacksonConfig {
 
-	@Bean
-	public ObjectMapper objectMapper() {
-		ObjectMapper om = new ObjectMapper();
-		om.registerModule(new JavaTimeModule());
-		om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-		return om;
-	}
+    @Bean
+    public ObjectMapper objectMapper() {
+        ObjectMapper om = new ObjectMapper();
+        om.registerModule(new JavaTimeModule());
+        om.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return om;
+    }
 }

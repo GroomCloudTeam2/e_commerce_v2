@@ -17,7 +17,8 @@ public class FeignErrorDecoder implements ErrorDecoder {
 			case 400 -> new CustomException(ErrorCode.INVALID_REQUEST);
 			case 403 -> new CustomException(ErrorCode.FORBIDDEN);
 			case 404 -> new CustomException(ErrorCode.ORDER_NOT_FOUND);
-			case 500, 502, 503 -> new CustomException(ErrorCode.ORDER_SERVICE_ERROR);
+			case 500, 502, 503 ->
+				new CustomException(ErrorCode.ORDER_SERVICE_ERROR);
 			default -> defaultDecoder.decode(methodKey, response);
 		};
 	}

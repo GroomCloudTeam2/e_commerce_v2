@@ -32,11 +32,17 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class UserEntity extends BaseEntity {
 
+	// =========================
+	// PK
+	// =========================
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	@Column(name = "user_id", columnDefinition = "uuid")
 	private UUID userId;
 
+	// =========================
+	// Basic Info
+	// =========================
 	@Column(name = "email", length = 100, nullable = false, unique = true)
 	private String email;
 
@@ -49,6 +55,9 @@ public class UserEntity extends BaseEntity {
 	@Column(name = "phone_number", length = 200, nullable = false)
 	private String phoneNumber;
 
+	// =========================
+	// Status / Role
+	// =========================
 	@Enumerated(EnumType.STRING)
 	@Column(name = "role", length = 20, nullable = false)
 	private UserRole role;
@@ -57,6 +66,9 @@ public class UserEntity extends BaseEntity {
 	@Column(name = "status", length = 20, nullable = false)
 	private UserStatus status;
 
+	// =========================
+	// Relation
+	// =========================
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
 	@Builder.Default
 	private List<AddressEntity> addresses = new ArrayList<>();
@@ -84,17 +96,16 @@ public class UserEntity extends BaseEntity {
 			return; // idempotent
 		}
 		this.status = UserStatus.WITHDRAWN;
+		// BaseEntity의 soft delete 사용
 		super.softDelete(deletedBy);
 	}
 
+	// 기존 시그니처 유지용
 	public void withdraw() {
 		withdraw(null);
 	}
 
 	public void ban() {
-		if (this.status == UserStatus.WITHDRAWN) {
-			throw new IllegalStateException("withdrawn user cannot be banned");
-		}
 		this.status = UserStatus.BANNED;
 	}
 
@@ -123,11 +134,13 @@ public class UserEntity extends BaseEntity {
 		if (this.status != UserStatus.WITHDRAWN) {
 			throw new IllegalStateException("only withdrawn user can be reactivated");
 		}
+
 		this.password = requireText(encodedPassword, "password");
 		this.nickname = requireText(nickname, "nickname");
 		this.phoneNumber = requireText(phoneNumber, "phoneNumber");
 		this.status = UserStatus.ACTIVE;
-		// BaseEntity restore 필요하면 BaseEntity에 restore() 추가해서 여기서 호출
+
+		// deleted_at/deleted_by 복구가 필요하면 BaseEntity에 restore() 추가 후 여기서 호출하는 방식 추천
 	}
 
 	private static String requireText(String value, String field) {

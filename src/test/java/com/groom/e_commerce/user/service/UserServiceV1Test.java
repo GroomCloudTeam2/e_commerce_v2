@@ -102,7 +102,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.of(defaultAddress));
 
 			// when
-			ResUserDtoV1 result = userService.getMe(userId);
+			ResUserDtoV1 result = userService.getMe();
 
 			// then
 			assertThat(result).isNotNull();
@@ -140,7 +140,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.of(owner));
 
 			// when
-			ResUserDtoV1 result = userService.getMe(userId);
+			ResUserDtoV1 result = userService.getMe();
 
 			// then
 			assertThat(result).isNotNull();
@@ -155,7 +155,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.empty());
 
 			// when & then
-			assertThatThrownBy(() -> userService.getMe(userId))
+			assertThatThrownBy(() -> userService.getMe())
 				.isInstanceOf(CustomException.class)
 				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
 		}
@@ -178,7 +178,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.empty());
 
 			// when
-			userService.updateMe(userId, request);
+			userService.updateMe(request);
 
 			// then
 			assertThat(user.getNickname()).isEqualTo("newNickname");
@@ -196,7 +196,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.of(user));
 
 			// when
-			userService.updateMe(userId, request);
+			userService.updateMe(request);
 
 			// then
 			assertThat(user.getPhoneNumber()).isEqualTo("010-9999-0000");
@@ -216,7 +216,7 @@ class UserServiceV1Test {
 				.willReturn("encodedNewPassword");
 
 			// when
-			userService.updateMe(userId, request);
+			userService.updateMe(request);
 
 			// then
 			assertThat(user.getPassword()).isEqualTo("encodedNewPassword");
@@ -242,7 +242,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.of(anotherUser));
 
 			// when & then
-			assertThatThrownBy(() -> userService.updateMe(userId, request))
+			assertThatThrownBy(() -> userService.updateMe(request))
 				.isInstanceOf(CustomException.class)
 				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.NICKNAME_DUPLICATED);
 		}
@@ -258,7 +258,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.of(user));
 
 			// when
-			userService.updateMe(userId, request);
+			userService.updateMe(request);
 
 			// then
 			verify(eventPublisher, never()).publishEvent(any());
@@ -277,7 +277,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.of(user));
 
 			// when
-			userService.deleteMe(userId);
+			userService.deleteMe();
 
 			// then
 			assertThat(user.isWithdrawn()).isTrue();
@@ -293,7 +293,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.of(user));
 
 			// when & then
-			assertThatThrownBy(() -> userService.deleteMe(userId))
+			assertThatThrownBy(() -> userService.deleteMe())
 				.isInstanceOf(CustomException.class)
 				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_WITHDRAWN);
 		}
@@ -320,7 +320,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.of(ownerUser));
 
 			// when
-			var result = userService.getSalesStats(userId, PeriodType.DAILY, targetDate);
+			var result = userService.getSalesStats(PeriodType.DAILY, targetDate);
 
 			// then
 			assertThat(result).isNotNull();
@@ -335,7 +335,7 @@ class UserServiceV1Test {
 				.willReturn(Optional.of(user)); // 일반 USER
 
 			// when & then
-			assertThatThrownBy(() -> userService.getSalesStats(userId, PeriodType.DAILY, LocalDate.now()))
+			assertThatThrownBy(() -> userService.getSalesStats(PeriodType.DAILY, LocalDate.now()))
 				.isInstanceOf(CustomException.class)
 				.hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
 		}

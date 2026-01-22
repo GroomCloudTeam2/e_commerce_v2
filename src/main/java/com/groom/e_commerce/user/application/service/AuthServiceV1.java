@@ -35,10 +35,9 @@ public class AuthServiceV1 {
 
 	private final UserRepository userRepository;
 	private final OwnerRepository ownerRepository;
-	// private final PasswordEncoder passwordEncoder;
-	private final ApplicationEventPublisher eventPublisher;
-	private final JwtUtil jwtUtil;
 	private final PasswordEncoder passwordEncoder;
+	private final JwtUtil jwtUtil;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public void signup(ReqSignupDtoV1 request) {
@@ -143,18 +142,6 @@ public class AuthServiceV1 {
 
 	public void logout() {
 		log.info("User logged out");
-	}
-
-	private void validateDuplicateEmail(String email) {
-		if (userRepository.existsByEmailAndDeletedAtIsNull(email)) {
-			throw new CustomException(ErrorCode.EMAIL_DUPLICATED);
-		}
-	}
-
-	private void validateDuplicateNickname(String nickname) {
-		if (userRepository.existsByNicknameAndDeletedAtIsNull(nickname)) {
-			throw new CustomException(ErrorCode.NICKNAME_DUPLICATED);
-		}
 	}
 
 	private void validateOwnerFields(ReqSignupDtoV1 request) {
