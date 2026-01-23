@@ -117,7 +117,7 @@ public class CartRedisRepositoryImpl implements CartRepository {
             return Optional.of(
                 new CartItem(
                     UUID.fromString(parts[0]),
-                    UUID.fromString(parts[1]),
+                    "null".equals(parts[1]) ? null : UUID.fromString(parts[1]),
                     qty.intValue()
                 )
             );
