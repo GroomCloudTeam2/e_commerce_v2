@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+    // spring boot / dependency-management는
+    // root build.gradle의 subprojects {}에서 이미 적용됨
+}
+
+group = 'org.example'
+version = '0.0.1-SNAPSHOT'
+description = 'user'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    // order 전용 의존성만 작성
+    // (공통 starter들은 root에서 이미 들어옴)
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

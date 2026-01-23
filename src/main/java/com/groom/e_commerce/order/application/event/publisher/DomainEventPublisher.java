@@ -1,8 +1,0 @@
-package com.groom.e_commerce.order.application.event.publisher;
-
-import com.groom.e_commerce.order.domain.event.base.DomainEvent;
-
-// 1. Publisher 인터페이스 (Port)
-public interface DomainEventPublisher {
-	void publish(DomainEvent event);
-}

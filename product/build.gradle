@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+
+}
+
+group = 'org.example'
+version = '0.0.1-SNAPSHOT'
+description = 'order'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    // order 전용 의존성만 작성
+    // (공통 starter들은 root에서 이미 들어옴)
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

@@ -1,1 +1,3 @@
 rootProject.name = 'e_commerce'
+
+include 'cart', 'order', 'user', 'product', 'payment'
