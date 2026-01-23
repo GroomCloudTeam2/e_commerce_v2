@@ -18,7 +18,7 @@ spring:
           min-idle: 20
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/ecommerce
+    url: jdbc:postgresql://localhost:5400/ecommerce
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver

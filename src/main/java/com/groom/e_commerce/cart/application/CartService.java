@@ -7,11 +7,13 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.groom.e_commerce.cart.application.dto.ProductCartInfo;
 import com.groom.e_commerce.cart.application.dto.StockManagement;
+import com.groom.e_commerce.cart.application.event.request.CartCheckoutRequestedEvent;
 import com.groom.e_commerce.cart.domain.model.CartItem;
 import com.groom.e_commerce.cart.domain.model.CartItemKey;
 import com.groom.e_commerce.cart.domain.repository.CartRepository;
@@ -43,6 +45,8 @@ public class CartService {
 
 	private final CartRepository cartRepository;
 	private final ProductClient productClient;
+	private final ApplicationEventPublisher eventPublisher;
+
 
 	/**
 	 * 장바구니 상품 추가
@@ -208,6 +212,69 @@ public class CartService {
 		log.info("장바구니 수량 변경 완료 - userId={}, productId={}",
 			userId, productId);
 	}
+
+
+	public UUID checkout(UUID userId) {
+
+		List<CartItem> cartItems = cartRepository.findAll(userId);
+
+		if (cartItems.isEmpty()) {
+			throw new CustomException(ErrorCode.CART_EMPTY);
+		}
+
+		UUID orderId = UUID.randomUUID();
+
+		List<CartCheckoutRequestedEvent.CartOrderItem> items =
+			cartItems.stream()
+				.map(item -> new CartCheckoutRequestedEvent.CartOrderItem(
+					item.getProductId(),
+					item.getVariantId(),
+					item.getQuantity()
+				))
+				.toList();
+
+		eventPublisher.publishEvent(
+			new CartCheckoutRequestedEvent(userId, orderId, items)
+		);
+
+		return orderId;
+	}
+
+
+	public UUID checkout(UUID userId, List<CartItemKey> selectedItems) {
+
+		List<CartItem> cartItems = cartRepository.findAll(userId);
+
+		List<CartItem> targetItems = cartItems.stream()
+			.filter(item ->
+				selectedItems.contains(
+					new CartItemKey(item.getProductId(), item.getVariantId())
+				)
+			)
+			.toList();
+
+		if (targetItems.isEmpty()) {
+			throw new CustomException(ErrorCode.CART_EMPTY);
+		}
+
+		UUID orderId = UUID.randomUUID();
+
+		List<CartCheckoutRequestedEvent.CartOrderItem> items =
+			targetItems.stream()
+				.map(item -> new CartCheckoutRequestedEvent.CartOrderItem(
+					item.getProductId(),
+					item.getVariantId(),
+					item.getQuantity()
+				))
+				.toList();
+
+		eventPublisher.publishEvent(
+			new CartCheckoutRequestedEvent(userId, orderId, items)
+		);
+
+		return orderId;
+	}
+
 
 
 	/**
