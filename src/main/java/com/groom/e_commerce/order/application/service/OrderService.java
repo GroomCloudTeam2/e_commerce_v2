@@ -135,19 +135,15 @@ public class OrderService {
                 eventPublisher.publishEvent(new OrderCancelledEvent(orderId, "사용자 요청"));
 
                 log.info("주문(ID: {})이 취소되었습니다. 재고 복구 프로세스를 시작합니다.", orderId);
-                
-                
+        }
 
+        public com.groom.e_commerce.order.presentation.dto.internal.OrderValidationResponse getOrderForPayment(
                         UUID orderId) {
-
-         
-
-                    order.getOrderId(),
-                            order.getTo
-                        order.getStatus());
-                                
-                
-                                
-                                
-                                
-        
+                Order order = orderRepository.findById(orderId)
+                                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다. ID: " + orderId));
+                return new com.groom.e_commerce.order.presentation.dto.internal.OrderValidationResponse(
+                                order.getOrderId(),
+                                order.getTotalPaymentAmount(),
+                                order.getStatus());
+        }
+}
