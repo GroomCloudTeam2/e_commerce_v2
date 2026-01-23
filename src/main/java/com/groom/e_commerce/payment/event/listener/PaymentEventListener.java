@@ -26,7 +26,7 @@ public class PaymentEventListener {
 	@EventListener
 	public void handleOrderCreated(OrderCreatedEvent event) {
 		log.info("[Payment] OrderCreatedEvent 수신 - orderId: {}, amount: {}",
-			event.orderId(), event.amount());
+				event.orderId(), event.amount());
 
 		// 결제 READY 생성 (멱등)
 		paymentCommandService.createReady(event.orderId(), event.amount());
@@ -39,12 +39,11 @@ public class PaymentEventListener {
 	@EventListener
 	public void handleOrderCancelled(OrderCancelledEvent event) {
 		log.info("[Payment] OrderCancelledEvent 수신 - orderId: {}, reason: {}",
-			event.orderId(), event.reason());
+				event.orderId(), event.reason());
 
 		// 결제 취소 / 환불 트리거
 		paymentCommandService.cancel(
-			new ReqCancelPayment(event.orderId(), event.reason())
-		);
+				new ReqCancelPayment(event.orderId(), event.reason()));
 	}
 
 	/**
@@ -54,14 +53,12 @@ public class PaymentEventListener {
 	@EventListener
 	public void handleStockDeductionFailed(StockDeductionFailedEvent event) {
 		log.warn("[Payment] StockDeductionFailedEvent 수신 - orderId: {}, reason: {}",
-			event.getOrderId(), event.getFailReason());
+				event.getOrderId(), event.getFailReason());
 
 		// 결제 취소(보상)
 		paymentCommandService.cancel(
-			new ReqCancelPayment(
-				event.getOrderId(),
-				event.getFailReason()
-			)
-		);
+				new ReqCancelPayment(
+						event.getOrderId(),
+						event.getFailReason()));
 	}
 }
