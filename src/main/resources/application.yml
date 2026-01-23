@@ -42,11 +42,11 @@ spring:
   cloud:
     openfeign:
       circuitbreaker:
-        enabled: true
+        enabled: false
 
   feign:
     circuitbreaker:
-      enabled: true
+      enabled: false
 
 
 external:
@@ -92,24 +92,51 @@ toss:
 resilience4j:
   circuitbreaker:
     instances:
-      tossPaymentsClient:
+      tossConfirm:
         slidingWindowType: COUNT_BASED
-        slidingWindowSize: 20
-        failureRateThreshold: 50
-        waitDurationInOpenState: 10s
-        minimumNumberOfCalls: 10
+        slidingWindowSize: 30
+        minimumNumberOfCalls: 20
+        failureRateThreshold: 60
+        waitDurationInOpenState: 5s
         permittedNumberOfCallsInHalfOpenState: 5
+        recordExceptions:
+          - feign.RetryableException
+          - java.io.IOException
+          - java.net.SocketTimeoutException
+        ignoreExceptions:
+          - com.groom.e_commerce.payment.presentation.exception.TossApiException
+
+
+      tossCancel:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 30
+        minimumNumberOfCalls: 20
+        failureRateThreshold: 60
+        waitDurationInOpenState: 5s
+        permittedNumberOfCallsInHalfOpenState: 5
+        recordExceptions:
+          - feign.RetryableException
+          - java.io.IOException
+          - java.net.SocketTimeoutException
+        ignoreExceptions:
+          - com.groom.e_commerce.payment.presentation.exception.TossApiException
+
 
   retry:
     instances:
-      tossPaymentsClient:
-        maxAttempts: 3
-        waitDuration: 200ms
+      tossConfirm:
+        maxAttempts: 2
+        waitDuration: 150ms
         retryExceptions:
           - java.io.IOException
+          - java.net.SocketTimeoutException
           - feign.RetryableException
 
-  timelimiter:
-    instances:
-      tossPaymentsClient:
-        timeoutDuration: 2s
+
+      tossCancel:
+        maxAttempts: 2
+        waitDuration: 150ms
+        retryExceptions:
+          - java.io.IOException
+          - java.net.SocketTimeoutException
+          - feign.RetryableException

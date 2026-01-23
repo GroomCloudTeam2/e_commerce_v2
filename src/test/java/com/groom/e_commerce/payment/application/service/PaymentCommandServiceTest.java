@@ -205,7 +205,7 @@ class PaymentCommandServiceTest {
 			ResPayment res = paymentCommandService.confirm(req);
 
 			assertThat(res).isNotNull();
-			verify(ready).markPaid(eq(paymentKey), eq(amount), any(LocalDateTime.class));
+			verify(ready).markPaid(eq(paymentKey), eq(amount));
 			verify(paymentRepository).save(ready);
 			verify(paymentEventPublisher).publishPaymentCompleted(eq(orderId), eq(paymentKey), eq(amount));
 			verify(paymentEventPublisher, never()).publishPaymentFailed(any(), any(), anyLong(), any(), any());

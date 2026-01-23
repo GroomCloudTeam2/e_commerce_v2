@@ -2,6 +2,7 @@ package com.groom.e_commerce.payment.domain.entity;
 
 import java.util.UUID;
 
+import com.groom.e_commerce.global.domain.entity.BaseEntity;
 import com.groom.e_commerce.payment.domain.model.PaymentStatus;
 
 import jakarta.persistence.Column;
@@ -31,7 +32,7 @@ import lombok.NoArgsConstructor;
 	}
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Payment {
+public class Payment extends BaseEntity {
 
 	@Id
 	@Column(name = "payment_id", columnDefinition = "uuid")

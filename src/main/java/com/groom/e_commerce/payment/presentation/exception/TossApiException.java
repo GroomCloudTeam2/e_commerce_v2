@@ -17,3 +17,4 @@ public class TossApiException extends CustomException {
 		super(errorCode, debugMessage);
 	}
 }
+

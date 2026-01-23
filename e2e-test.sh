@@ -59,7 +59,7 @@ log_step "1. 카테고리 DB 직접 생성"
 CATEGORY_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
 CATEGORY_NAME="테스트카테고리_${TIMESTAMP}"
 
-docker exec local-db psql -U postgres -d ecommerce -c "
+docker exec postgres-ecommerce psql -U postgres -d ecommerce -c "
 INSERT INTO p_category (category_id, name, depth, sort_order, is_active, created_at, updated_at)
 VALUES ('${CATEGORY_ID}', '${CATEGORY_NAME}', 0, 1, true, NOW(), NOW())
 ON CONFLICT DO NOTHING;
@@ -72,6 +72,8 @@ log_info "Category ID: ${CATEGORY_ID}"
 # 2. Owner 회원가입
 # ===========================================
 log_step "2. Owner 회원가입"
+# (이하 동일 — 변경 없음)
+
 
 OWNER_EMAIL="owner_${TIMESTAMP}@test.com"
 OWNER_PASSWORD="Test1234!"
@@ -274,7 +276,7 @@ log_step "11. Payment READY 상태 확인"
 
 sleep 2
 
-PAYMENT_STATUS=$(docker exec local-db psql -U postgres -d ecommerce -t -c "
+PAYMENT_STATUS=$(docker exec postgres-ecommerce psql -U postgres -d ecommerce -t -c "
 SELECT status FROM p_payment WHERE order_id = '${ORDER_ID}';
 " | tr -d ' \n')
 
@@ -283,6 +285,7 @@ if [ "$PAYMENT_STATUS" == "READY" ]; then
 else
     log_error "Payment 상태가 READY가 아닙니다. 현재 상태: ${PAYMENT_STATUS}"
 fi
+
 
 # ===========================================
 # 결과 요약

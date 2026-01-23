@@ -112,8 +112,9 @@ public enum ErrorCode {
     // =====================
     PAYMENT_CONFIRM_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_CONFIRM_ERROR", "결제 승인 처리 중 오류가 발생했습니다."),
     PAYMENT_NOT_DONE(HttpStatus.BAD_REQUEST, "PAYMENT_NOT_DONE", "결제가 정상적으로 승인되지 않았습니다."),
+	PAYMENT_GATEWAY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "PAYMENT_GATEWAY_UNAVAILABLE", "결제 승인 서버(결제대행사)와의 통신이 원활하지 않습니다. 잠시 후 다시 시도해 주세요."),
 
-    // =====================
+	// =====================
     // Payment - 취소/환불
     // =====================
     REFUND_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "REFUND_PROCESSING_FAILED", "환불 처리 중 오류가 발생했습니다."),
