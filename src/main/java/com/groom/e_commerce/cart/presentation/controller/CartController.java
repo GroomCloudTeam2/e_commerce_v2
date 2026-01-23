@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.groom.e_commerce.cart.application.CartService;
 import com.groom.e_commerce.cart.presentation.dto.request.CartAddRequest;
+import com.groom.e_commerce.cart.presentation.dto.request.CartCheckoutRequest;
+import com.groom.e_commerce.cart.presentation.dto.response.CartCheckoutResponse;
 import com.groom.e_commerce.cart.presentation.dto.response.CartItemResponse;
 import com.groom.e_commerce.global.util.SecurityUtil;
 
@@ -139,6 +141,31 @@ public class CartController {
             quantity
         );
     }
+
+    @PostMapping("/checkout")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CartCheckoutResponse checkout(
+        @RequestBody(required = false) CartCheckoutRequest request
+    ) {
+
+        UUID orderId;
+
+        if (request == null || request.getSelectedItems() == null) {
+            // 전체 주문
+            orderId = cartService.checkout(
+                SecurityUtil.getCurrentUserId()
+            );
+        } else {
+            // 선택 주문
+            orderId = cartService.checkout(
+                SecurityUtil.getCurrentUserId(),
+                request.getSelectedItems()
+            );
+        }
+
+        return new CartCheckoutResponse(orderId);
+    }
+
 
     /**
      * 단일 아이템 삭제
