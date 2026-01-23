@@ -8,6 +8,7 @@ import lombok.Getter;
 public class ProductCartInfo {
 
     private UUID productId;
+    private UUID ownerId;
     private UUID variantId;
 
     private String productName;
