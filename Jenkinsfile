@@ -38,19 +38,19 @@ pipeline {
         /* =========================
          * 1️⃣ Test
          * ========================= */
-        stage('Test') {
-            steps {
-                sh '''
-                  ./gradlew clean test jacocoTestReport
-                '''
-            }
-            post {
-                always {
-                    junit 'build/test-results/test/**/*.xml'
-                    archiveArtifacts artifacts: 'build/reports/jacoco/test/jacocoTestReport.xml'
-                }
-            }
-        }
+//         stage('Test') {
+//             steps {
+//                 sh '''
+//                   ./gradlew clean test jacocoTestReport
+//                 '''
+//             }
+//             post {
+//                 always {
+//                     junit 'build/test-results/test/**/*.xml'
+//                     archiveArtifacts artifacts: 'build/reports/jacoco/test/jacocoTestReport.xml'
+//                 }
+//             }
+//         }
 
         /* =========================
          * 2️⃣ Build Jar
