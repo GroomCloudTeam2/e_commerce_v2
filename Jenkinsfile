@@ -176,7 +176,20 @@ pipeline {
                 sh './gradlew build -x test'
             }
         }
-    }  // ✅ 이게 빠져 있었음!!!
+                stage('Test') {
+                    steps {
+                        sh '''
+                          ./gradlew clean test jacocoTestReport
+                        '''
+                    }
+                    post {
+                        always {
+                            junit 'build/test-results/test/**/*.xml'
+                            archiveArtifacts artifacts: 'build/reports/jacoco/test/jacocoTestReport.xml'
+                        }
+                    }
+                }
+    }
 
     post {
         success {
